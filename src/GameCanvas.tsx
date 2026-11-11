@@ -26,10 +26,13 @@ import { expose } from './state/debugHandle'
 import { useGame, useQuality, type Quality } from './state/gameStore'
 import { runtime, type TeleportRequest } from './state/runtime'
 import { Vehicles } from './vehicles/Vehicles'
+import { Traffic } from './vehicles/traffic/Traffic'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
 import { Pedestrians } from './world/pedestrians/Pedestrians'
+import { Billboards } from './world/furniture/Billboards'
+import { StreetFurniture } from './world/furniture/StreetFurniture'
 import type { LoadedZone } from './world/zone/loadZone'
 
 /** Upper limit on device pixel ratio: the single biggest lever on GPU cost. */
@@ -77,8 +80,11 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
         >
           <StepClock />
           <World zone={zone} />
+          <Billboards zone={zone} start={start} />
+          <StreetFurniture zone={zone} />
           <Pedestrians zone={zone} start={start} />
           <Vehicles zone={zone} start={start} />
+          <Traffic zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />
           <ReadySignal />

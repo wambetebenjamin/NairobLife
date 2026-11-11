@@ -141,9 +141,14 @@ export function planPedestrians(
     .sort((a, b) => distance(a) - distance(b))
     .slice(0, 24)
   const used = new Set(nearby)
-  const remainder = candidates
-    .filter((p) => !used.has(p))
-    .sort((a, b) => hash01(a.seed, 77) - hash01(b.seed, 77))
+  const stages = zone.pois.filter((poi) => poi.k === 'stage')
+  const score = (p: WalkingPath) => {
+    const x = (p.ax + p.bx) / 2,
+      z = (p.az + p.bz) / 2
+    const nearStage = stages.some((poi) => Math.hypot(poi.x / zone.q - x, poi.z / zone.q - z) < 65)
+    return hash01(p.seed, 77) / (nearStage ? 2.5 : 1)
+  }
+  const remainder = candidates.filter((p) => !used.has(p)).sort((a, b) => score(a) - score(b))
   return [...plaza, ...nearby, ...remainder].slice(0, Math.max(0, limit))
 }
 

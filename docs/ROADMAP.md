@@ -46,13 +46,17 @@ Phases 3 onwards are plans, not promises: nothing in them is built yet.
 
 ## Phase 3: a living city
 
-- [x] Ambient walking pedestrians on clear pavements and City Square (visual only)
-
-- [ ] Road graph built from the baked streets (one-way flags and lane counts are stored)
-- [ ] Traffic that follows it: cars, matatus that stop at stages, bodas that do not
-- [ ] Pedestrians on the pavements, thickest around stages and markets
+- [x] Ambient walking pedestrians on clear pavements and City Square (visual only), with
+      extra pavement crowd candidates near mapped stages
+- [x] A ground-level directed graph from baked streets, retaining one-way and lane data
+- [x] Prototype ambient cars, matatus and bodas following the graph; matatus pause near
+      mapped stages. Traffic is non-colliding, can overlap, respawns at dead ends, and
+      does not obey signals or carry passengers yet. Elevated roads are excluded.
+- [x] Decorative mapped street lamps, traffic lights and stage signs (signals are static)
+- [x] In-world "ADVERTISE HERE" placeholders; no ad booking or contact system
+- [ ] More natural pedestrian movement and denser crowds near markets and stages
 - [ ] Matatu routes you can ride, as fast travel with a view
-- [ ] Street furniture from the map: street lamps, traffic lights, stage signs
+- [ ] Interactive traffic rules and collision-aware vehicles
 - [ ] Street-level flavour in Sheng, reviewed by native speakers
 
 ## Phase 4: a bigger, better-looking Nairobi
