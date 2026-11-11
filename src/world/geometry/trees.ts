@@ -15,6 +15,9 @@ import { TREE_FLAME, TREE_GREENS, TREE_JACARANDA, pick, scale } from './palette'
 /** Floats per tree: x, z, height, canopy radius, r, g, b, yaw. */
 export const TREE_STRIDE = 8
 
+/** Trunk radius at the ground, in metres, for a tree of the given height. */
+export const trunkRadius = (height: number) => 0.12 + height * 0.017
+
 /** Square metres of area per planted tree. */
 const DENSITY: Partial<Record<AreaKind, number>> = { wood: 110, park: 520, garden: 330 }
 const MAX_TREES = 2600

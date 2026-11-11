@@ -14,13 +14,16 @@ import {
 import { SpatialGrid } from '../../core/spatialGrid'
 import type { ZoneBuilding, ZoneFile, ZoneRoad } from './format'
 
-interface Segment {
+/** One straight piece of a road's centre line, in metres. */
+export interface RoadSegment {
   ax: number
   az: number
   bx: number
   bz: number
   road: ZoneRoad
 }
+
+type Segment = RoadSegment
 
 interface Footprint {
   outer: number[]
@@ -115,6 +118,14 @@ export class ZoneIndex {
       if (pointInPolygon(x, z, fp.outer, fp.holes)) return fp.building
     }
     return undefined
+  }
+
+  /**
+   * Visit every road segment that could lie within `radius` of a point. The same segment
+   * can be visited more than once, and some will be further away: measure before using.
+   */
+  roadsNear(x: number, z: number, radius: number, visit: (segment: RoadSegment) => void): void {
+    this.segments.near(x, z, radius, visit)
   }
 
   /** Nearest point on any ground-level road within maxDist, for un-sticking spawns. */

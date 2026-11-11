@@ -220,3 +220,75 @@ export function clipRingToRect(ring: Flat, rect: Rect): number[] {
 export function rectContains(rect: Rect, x: number, z: number): boolean {
   return x >= rect.minX && x <= rect.maxX && z >= rect.minZ && z <= rect.maxZ
 }
+
+/** A rectangle at any angle: a parked vehicle's footprint. */
+export interface OrientedRect {
+  x: number
+  z: number
+  /** Unit vector along the rectangle's length. */
+  dx: number
+  dz: number
+  halfLength: number
+  halfWidth: number
+}
+
+/** Distance from a point to an oriented rectangle. Zero when the point is inside it. */
+export function distToOrientedRect(px: number, pz: number, rect: OrientedRect): number {
+  const rx = px - rect.x
+  const rz = pz - rect.z
+  const along = Math.abs(rx * rect.dx + rz * rect.dz) - rect.halfLength
+  const across = Math.abs(rx * -rect.dz + rz * rect.dx) - rect.halfWidth
+  return Math.hypot(Math.max(along, 0), Math.max(across, 0))
+}
+
+/** The four corners of an oriented rectangle, flat [x0, z0, ...]. */
+export function orientedRectCorners(rect: OrientedRect): number[] {
+  const lx = rect.dx * rect.halfLength
+  const lz = rect.dz * rect.halfLength
+  const wx = -rect.dz * rect.halfWidth
+  const wz = rect.dx * rect.halfWidth
+  return [
+    rect.x + lx + wx,
+    rect.z + lz + wz,
+    rect.x + lx - wx,
+    rect.z + lz - wz,
+    rect.x - lx - wx,
+    rect.z - lz - wz,
+    rect.x - lx + wx,
+    rect.z - lz + wz,
+  ]
+}
+
+/**
+ * True when two oriented rectangles overlap, or come within `margin` of doing so.
+ * Separating axis test: two rectangles are apart exactly when one of their four edge
+ * directions shows a gap between them.
+ */
+export function orientedRectsOverlap(a: OrientedRect, b: OrientedRect, margin = 0): boolean {
+  const cx = b.x - a.x
+  const cz = b.z - a.z
+  // How far each rectangle reaches along the other's axes.
+  const dot = Math.abs(a.dx * b.dx + a.dz * b.dz)
+  const cross = Math.abs(a.dx * b.dz - a.dz * b.dx)
+  if (
+    Math.abs(cx * a.dx + cz * a.dz) >
+    a.halfLength + b.halfLength * dot + b.halfWidth * cross + margin
+  )
+    return false
+  if (
+    Math.abs(cx * -a.dz + cz * a.dx) >
+    a.halfWidth + b.halfLength * cross + b.halfWidth * dot + margin
+  )
+    return false
+  if (
+    Math.abs(cx * b.dx + cz * b.dz) >
+    b.halfLength + a.halfLength * dot + a.halfWidth * cross + margin
+  )
+    return false
+  if (
+    Math.abs(cx * -b.dz + cz * b.dx) >
+    b.halfWidth + a.halfLength * cross + a.halfWidth * dot + margin
+  )
+    return false
+  return true
+}

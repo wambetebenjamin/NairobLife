@@ -17,13 +17,10 @@ import {
 } from 'three'
 import { hash01 } from '../core/random'
 import { TREE_TRUNK } from './geometry/palette'
-import { TREE_STRIDE } from './geometry/trees'
+import { TREE_STRIDE, trunkRadius } from './geometry/trees'
 import { useStaticColliders } from './physics/useStaticColliders'
 
 const UP = new Vector3(0, 1, 0)
-
-/** Trunk radius in metres for a tree of the given height. */
-const trunkRadius = (height: number) => 0.12 + height * 0.017
 
 export function Trees({ trees }: { trees: Float32Array }) {
   const count = trees.length / TREE_STRIDE
