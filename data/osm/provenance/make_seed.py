@@ -208,7 +208,7 @@ for r in relations:
 
 out = {
     'version': 0.6,
-    'generator': 'NairobLife seed (merged public OSM extracts; see docs/DATA.md)',
+    'generator': 'Kanairo seed (merged public OSM extracts; see docs/DATA.md)',
     'osm3s': {'copyright': 'The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.'},
     'elements': elements,
 }

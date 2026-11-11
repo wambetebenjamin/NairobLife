@@ -172,6 +172,6 @@ export function createBuildingMaterial(): MeshLambertMaterial {
       .replace('#include <color_fragment>', `#include <color_fragment>\n${FRAGMENT_MAIN}`)
   }
   // Without this three would reuse the stock Lambert program and skip the patch.
-  material.customProgramCacheKey = () => 'nairoblife-facade-v3'
+  material.customProgramCacheKey = () => 'kanairo-facade-v3'
   return material
 }

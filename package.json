@@ -1,7 +1,7 @@
 {
-  "name": "nairoblife",
+  "name": "kanairo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A playable Nairobi, Kenya in your browser. 3D open world built from real OpenStreetMap data.",
   "type": "module",
   "engines": {

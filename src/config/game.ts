@@ -4,11 +4,16 @@
  */
 
 /**
- * Change the name here and it changes on the loading screen, the menu and the HUD.
- * (index.html and package.json carry it too; search for "NairobLife".)
+ * "Kanairo" is what Nairobi calls itself in Sheng.
+ *
+ * Change the name here and it changes on the menu and the HUD. index.html (the loading
+ * screen and the page title) and package.json carry it too; search for "Kanairo".
  */
-export const GAME_NAME = 'NairobLife'
+export const GAME_NAME = 'Kanairo'
+/** The name as the menu draws it: the second half is picked out in the accent colour. */
+export const GAME_WORDMARK = ['Ka', 'nairo'] as const
 export const GAME_TAGLINE = 'Free-roam Nairobi. No download.'
+/** The repository kept the project's working title. */
 export const REPO_URL = 'https://github.com/wambetebenjamin/NairobLife'
 
 export const PLAYER = {

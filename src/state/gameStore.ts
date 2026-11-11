@@ -143,7 +143,7 @@ export const useGame = create<GameState>()(
       dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
     }),
     {
-      name: 'nairoblife-settings',
+      name: 'kanairo-settings',
       version: 1,
       // Only settings are saved; everything else is session state.
       partialize: (state) => ({ settings: state.settings }),
