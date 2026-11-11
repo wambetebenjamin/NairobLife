@@ -6,13 +6,13 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
     />
-    <title>Kanairo · Free-roam Nairobi in your browser</title>
+    <title>kaNAIRO · Free-roam Nairobi in your browser</title>
     <meta
       name="description"
       content="An open-world Nairobi you can walk and drive around in your browser. Real streets and buildings from OpenStreetMap. No download."
     />
     <meta name="theme-color" content="#0e0f12" />
-    <meta property="og:title" content="Kanairo" />
+    <meta property="og:title" content="kaNAIRO" />
     <meta
       property="og:description"
       content="Free-roam Nairobi in your browser. Real streets, no download."
@@ -95,6 +95,11 @@
           sans-serif;
         letter-spacing: 0.01em;
       }
+      /* kaNAIRO: the face has capitals only, so the "ka" is drawn as small capitals. */
+      .boot__title small {
+        font-size: 0.72em;
+        text-transform: uppercase;
+      }
       .boot__title span {
         color: #ffd21f;
       }
@@ -154,12 +159,12 @@
           <i style="background: #111"></i><i style="background: #c8102e"></i
           ><i style="background: #1f9d55"></i>
         </div>
-        <h1 class="boot__title">KA<span>NAIRO</span></h1>
+        <h1 class="boot__title"><small>ka</small><span>NAIRO</span></h1>
         <p class="boot__tag">Free-roam Nairobi. No download.</p>
         <div class="boot__bar"><i id="boot-bar"></i></div>
         <p class="boot__status" id="boot-status">Loading</p>
         <p class="boot__tip" id="boot-tip"></p>
-        <noscript><p>Kanairo needs JavaScript to run.</p></noscript>
+        <noscript><p>kaNAIRO needs JavaScript to run.</p></noscript>
       </div>
     </div>
     <div id="root"></div>

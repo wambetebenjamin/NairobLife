@@ -2,18 +2,18 @@
  * The main menu, drawn over the live city (the camera circles KICC behind it).
  */
 import { useMemo } from 'react'
-import { GAME_WORDMARK, REPO_URL } from '../config/game'
+import { REPO_URL } from '../config/game'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { startGame } from '../game/actions'
 import { useGame } from '../state/gameStore'
 import { ControlsCard } from './ControlsCard'
+import { GameName } from './GameName'
 import { useT } from './useT'
 
 export function MainMenu() {
   const t = useT()
   const openSettings = useGame((state) => state.setSettingsOpen)
   const zone = useGame((state) => state.zone)
-  const [head, tail] = GAME_WORDMARK
   const stats = useMemo(() => {
     if (!zone) return ''
     const streets = new Set(zone.file.roads.map((road) => road.n).filter(Boolean)).size
@@ -29,8 +29,7 @@ export function MainMenu() {
           <i />
         </div>
         <h1 className="wordmark">
-          {head.toUpperCase()}
-          <span>{tail.toUpperCase()}</span>
+          <GameName />
         </h1>
         <p className="menu__tagline">{t('tagline')}</p>
 

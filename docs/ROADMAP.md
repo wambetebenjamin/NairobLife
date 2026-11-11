@@ -1,6 +1,6 @@
 # Roadmap
 
-Where Kanairo is, and the order things are planned in. Each phase should end with
+Where kaNAIRO is, and the order things are planned in. Each phase should end with
 something playable. The feature list is modelled on [CodedLife](reference/README.md);
 the content is Nairobi's own.
 

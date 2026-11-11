@@ -125,8 +125,18 @@ kbd {
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
 }
 
-.wordmark span {
+.wordmark .name__big {
   color: var(--accent);
+}
+
+/*
+ * The game's name, kaNAIRO (ui/GameName.tsx). The display face has capitals only, so the
+ * "ka" is drawn as small capitals: 0.72 of the size is the height its lower-case letters
+ * would have. The upper-casing keeps that true in a fallback font that does have them.
+ */
+.name__small {
+  font-size: 0.72em;
+  text-transform: uppercase;
 }
 
 .button {

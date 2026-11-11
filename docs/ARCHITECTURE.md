@@ -1,6 +1,6 @@
 # Architecture
 
-How Kanairo is put together, and the reasoning behind the choices that would be
+How kaNAIRO is put together, and the reasoning behind the choices that would be
 expensive to change later.
 
 ## The shape of it

@@ -1,13 +1,13 @@
 # Reference: CodedLife (codedlife.app)
 
-Kanairo is inspired by [CodedLife](https://codedlife.app), a browser game that turns
+kaNAIRO is inspired by [CodedLife](https://codedlife.app), a browser game that turns
 Accra, Ghana into a playable open world. This folder holds what we learned from it.
 
 - `codedlife-page-source.html` is the "view source" capture of the CodedLife landing page
   that was uploaded to this repo. It contains **markup only** (no game code, no assets).
   It is kept for reference and is not shipped, imported, or copied from.
 
-> We take the _idea_ and the _feature shape_. All Kanairo code, art, copy and data
+> We take the _idea_ and the _feature shape_. All kaNAIRO code, art, copy and data
 > pipelines are original. Do not paste CodedLife code, CSS, icons or text into `src/`.
 
 ## What the reference game is
@@ -42,7 +42,7 @@ bundler. Quality is `auto / high / medium / low`, where auto steps down when fra
 
 ## What we do differently (on purpose)
 
-| Topic         | CodedLife                      | Kanairo                                                                       | Why                                                                                                                        |
+| Topic         | CodedLife                      | kaNAIRO                                                                       | Why                                                                                                                        |
 | ------------- | ------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Rendering     | three.js WebGPU + TSL, vanilla | React Three Fiber on WebGL2                                                   | Widest device reach today (phones in particular), and a component model that scales with a team. WebGPU is a later opt-in. |
 | Build         | Import map + CDN, no bundler   | Vite, hashed assets, self-hosted fonts                                        | Works offline, cacheable forever, no third-party runtime dependency.                                                       |

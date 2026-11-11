@@ -10,7 +10,6 @@
  * TODO(sheng): street-level flavour text ("Uko tao", "Hapa ni Archives") on arrival.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { GAME_NAME } from '../config/game'
 import { BASE_ELEVATION_M, WORLD_ORIGIN } from '../config/zones'
 import { compassPoint, createProjection, formatLatLon, yawToBearingDeg } from '../core/geo'
 import {
@@ -27,6 +26,7 @@ import { runtime } from '../state/runtime'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { formatClock, sunAngle } from '../world/environment/skyModel'
 import { ControlsCard } from './ControlsCard'
+import { GameName } from './GameName'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -96,7 +96,9 @@ export function Hud() {
 
   return (
     <div className={`hud${showHud ? '' : ' hud--hidden'}`}>
-      <div className="hud__brand">{GAME_NAME}</div>
+      <div className="hud__brand">
+        <GameName />
+      </div>
 
       <div className="toolbar">
         <div className="clock" title="Time of day. [ and ] move the sun.">

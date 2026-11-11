@@ -1,15 +1,17 @@
-# Kanairo
+# kaNAIRO
 
 **Free-roam Nairobi in your browser. No download, no install.**
 
-Kanairo is an open-world game set in a 3D Nairobi built from real map data. This is
+**Play it: <https://playkanairo.vercel.app>**
+
+kaNAIRO is an open-world game set in a 3D Nairobi built from real map data. This is
 **Phase 2**: you explore the Central Business District on foot, or at the wheel of a car,
 a boda boda or a matatu. Every street and building footprint comes from
 [OpenStreetMap](https://www.openstreetmap.org), so Kenyatta Avenue is where Kenyatta
 Avenue is, and KICC stands 105 m over City Square.
 
-Kanairo is Sheng for Nairobi. The project began as "NairobLife", and the repository still
-has that name.
+The name is Kanairo, Sheng for Nairobi, written kaNAIRO. The project began as
+"NairobLife", and the repository still has that name.
 
 The idea comes from [CodedLife](https://codedlife.app), which does the same for Accra. The
 code, art and data pipeline here are original. See [`docs/reference`](docs/reference/README.md).
