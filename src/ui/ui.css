@@ -241,10 +241,17 @@ kbd {
   gap: 10px;
 }
 
+/*
+ * A mode card: its name, a hint under it and, for a mode that is not built yet, a badge
+ * at the top right. The card is a row that wraps, so when the name and the badge do not
+ * fit side by side (a narrow phone, a long name) the badge takes a line of its own
+ * instead of covering the name.
+ */
 .mode {
-  position: relative;
-  display: grid;
-  gap: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2px 12px;
   padding: 13px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -257,18 +264,20 @@ kbd {
 }
 
 .mode__name {
+  flex: 1 1 auto;
   font: 400 19px/1.15 var(--display);
 }
 
+/* Always a line of its own, after the name and the badge. */
 .mode__hint {
+  order: 1;
+  flex: 0 0 100%;
   color: var(--muted);
   font-size: 13px;
 }
 
 .mode__badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  flex: none;
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
