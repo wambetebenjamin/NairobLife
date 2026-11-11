@@ -31,7 +31,11 @@ import {
   type RGB,
 } from './palette'
 
-export const FACADE = { blank: 0, punched: 1, ribbon: 2, curtain: 3 } as const
+/**
+ * How a wall is glazed. The numbers travel to the shader (materials/buildingMaterial.ts)
+ * and, for landmarks, are written into the zone file, so they must not be renumbered.
+ */
+export const FACADE = { blank: 0, punched: 1, ribbon: 2, curtain: 3, piers: 4 } as const
 
 /** Storey height the window grid aims for, in metres. */
 const FLOOR_HEIGHT = 3.4
@@ -119,10 +123,16 @@ export function styleFor(b: ZoneBuilding): Style {
   if (BLANK_TYPES.has(type) || height < 2.6) facade = FACADE.blank
   else if (b.c)
     facade = r < 0.5 ? FACADE.ribbon : FACADE.punched // a mapped wall colour means masonry, not glass
-  else if (b.h >= 45) facade = r < 0.5 ? FACADE.curtain : r < 0.85 ? FACADE.ribbon : FACADE.punched
+  // Downtown's towers are mostly concrete: bands of windows, or glass in strips between
+  // piers (Times Tower). Glass curtain walls are the newer minority.
+  else if (b.h >= 45)
+    facade =
+      r < 0.3 ? FACADE.curtain : r < 0.58 ? FACADE.ribbon : r < 0.86 ? FACADE.piers : FACADE.punched
   else if (b.h >= 18) facade = r < 0.18 ? FACADE.curtain : r < 0.55 ? FACADE.ribbon : FACADE.punched
   else facade = r < 0.1 ? FACADE.ribbon : FACADE.punched
   if (civic && facade === FACADE.curtain) facade = FACADE.punched
+  // A landmark the pipeline has styled by hand.
+  if (b.f !== undefined) facade = b.f
 
   let wall: RGB
   if (b.c) wall = hexToLinear(b.c)
@@ -146,6 +156,7 @@ export function styleFor(b: ZoneBuilding): Style {
     facade !== FACADE.blank &&
     !b.b &&
     !b.c &&
+    b.f === undefined &&
     !civic &&
     height >= 6 &&
     b.h < 70 &&
@@ -240,14 +251,27 @@ class Writer {
   }
 }
 
+/** A ring made wider or narrower about a point: what the top of a leaning wall follows. */
+function scaleRing(ring: number[], cx: number, cz: number, k: number): number[] {
+  if (k === 1) return ring
+  const out = new Array<number>(ring.length)
+  for (let i = 0; i < ring.length; i += 2) {
+    out[i] = cx + (ring[i] - cx) * k
+    out[i + 1] = cz + (ring[i + 1] - cz) * k
+  }
+  return out
+}
+
 /**
- * Walls around one ring, from `base` up to `top`.
+ * Walls around one ring, from `base` up to `top`. `topRing` is the same ring where the
+ * walls end: the ring itself for straight walls, a scaled copy for walls that lean.
  * Rings with positive signed area (outer rings) get outward normals; holes are wound the
  * other way in the zone format, so their walls face into the courtyard.
  */
 function addWalls(
   w: Writer,
   ring: number[],
+  topRing: number[],
   base: number,
   top: number,
   colour: RGB,
@@ -255,7 +279,8 @@ function addWalls(
   salt: number,
 ): void {
   const n = ring.length / 2
-  const floors = Math.max(1, Math.round((top - base) / FLOOR_HEIGHT))
+  const rise = top - base
+  const floors = Math.max(1, Math.round(rise / FLOOR_HEIGHT))
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n
     const ax = ring[i * 2]
@@ -266,17 +291,48 @@ function addWalls(
     const dz = bz - az
     const len = Math.hypot(dx, dz)
     if (len < 1e-4) continue
-    const nx = dz / len
-    const nz = -dx / len
+    let nx = dz / len
+    let ny = 0
+    let nz = -dx / len
+    if (topRing !== ring) {
+      // How far the top of this wall has moved outwards tilts the normal down or up.
+      const lean = (topRing[i * 2] - ax) * nx + (topRing[i * 2 + 1] - az) * nz
+      const k = 1 / Math.hypot(rise, lean)
+      nx *= rise * k
+      nz *= rise * k
+      ny = -lean * k
+    }
     const bays = len < MIN_WINDOW_WALL ? 0 : Math.max(1, Math.round(len / BAY_WIDTH))
     const style = bays === 0 ? FACADE.blank : facade
     // Start every wall on its own run of bay numbers so walls do not repeat each other.
     const u0 = ((salt + i) % 32) * 32
     const u1 = u0 + bays
-    const v0 = w.vertex(ax, base, az, nx, 0, nz, colour, u0, 0, style)
-    const v1 = w.vertex(bx, base, bz, nx, 0, nz, colour, u1, 0, style)
-    const v2 = w.vertex(bx, top, bz, nx, 0, nz, colour, u1, floors, style)
-    const v3 = w.vertex(ax, top, az, nx, 0, nz, colour, u0, floors, style)
+    const v0 = w.vertex(ax, base, az, nx, ny, nz, colour, u0, 0, style)
+    const v1 = w.vertex(bx, base, bz, nx, ny, nz, colour, u1, 0, style)
+    const v2 = w.vertex(
+      topRing[j * 2],
+      top,
+      topRing[j * 2 + 1],
+      nx,
+      ny,
+      nz,
+      colour,
+      u1,
+      floors,
+      style,
+    )
+    const v3 = w.vertex(
+      topRing[i * 2],
+      top,
+      topRing[i * 2 + 1],
+      nx,
+      ny,
+      nz,
+      colour,
+      u0,
+      floors,
+      style,
+    )
     w.idx.push(v1, v0, v3, v1, v3, v2)
   }
 }
@@ -330,6 +386,7 @@ function addShapedRoof(
   const n = ring.length / 2
   const [cx, cz] = ringCentroid(ring)
   const bands = shape === 'dome' ? 5 : 1
+  const ribbed = scale(colour, 0.8)
   for (let k = 0; k < bands; k++) {
     const t0 = (k / bands) * (Math.PI / 2)
     const t1 = ((k + 1) / bands) * (Math.PI / 2)
@@ -351,8 +408,11 @@ function addShapedRoof(
       // Faces point away from the axis and upwards.
       const hx = (ax + bx) / 2 - cx
       const hz = (az + bz) / 2 - cz
-      w.facet(ax, y0, az, bx, y0, bz, ex, y1, ez, hx, 1, hz, colour)
-      if (s1 > 1e-6) w.facet(ax, y0, az, ex, y1, ez, fx, y1, fz, hx, 1, hz, colour)
+      // Every other panel of a cone is a shade darker, which reads as the ribs of a
+      // folded roof (the KICC amphitheatre) instead of a smooth party hat.
+      const panel = shape === 'cone' && i % 2 === 1 ? ribbed : colour
+      w.facet(ax, y0, az, bx, y0, bz, ex, y1, ez, hx, 1, hz, panel)
+      if (s1 > 1e-6) w.facet(ax, y0, az, ex, y1, ez, fx, y1, fz, hx, 1, hz, panel)
     }
   }
 }
@@ -376,13 +436,28 @@ export function buildBuildingMesh(buildings: readonly ZoneBuilding[], q: number)
     const shaped = b.rs && holes.length === 0 ? b.rs : undefined
     const wallTop = shaped ? Math.max(base + 0.5, b.h - (b.rh ?? 0)) : b.h
 
-    addWalls(w, outer, base, wallTop, style.wall, style.facade, b.id & 31)
+    // Leaning walls end on a wider or narrower copy of the footprint.
+    const lean = b.tp ?? 1
+    const [cx, cz] = lean === 1 ? [0, 0] : ringCentroid(outer)
+    const outerTop = scaleRing(outer, cx, cz, lean)
+    const holesTop = holes.map((hole) => scaleRing(hole, cx, cz, lean))
+
+    addWalls(w, outer, outerTop, base, wallTop, style.wall, style.facade, b.id & 31)
     holes.forEach((hole, i) =>
-      addWalls(w, hole, base, wallTop, style.wall, style.facade, (b.id + 7 * (i + 1)) & 31),
+      addWalls(
+        w,
+        hole,
+        holesTop[i],
+        base,
+        wallTop,
+        style.wall,
+        style.facade,
+        (b.id + 7 * (i + 1)) & 31,
+      ),
     )
 
-    if (shaped) addShapedRoof(w, outer, wallTop, b.h, shaped, style.roof)
-    else addCap(w, outer, holes, b.h, true, style.roof)
+    if (shaped) addShapedRoof(w, outerTop, wallTop, b.h, shaped, style.roof)
+    else addCap(w, outerTop, holesTop, b.h, true, style.roof)
 
     // Parts that float above the ground (a tower's crown, a skybridge) need an underside.
     if (base > 0.5) addCap(w, outer, holes, base, false, scale(style.wall, 0.7))

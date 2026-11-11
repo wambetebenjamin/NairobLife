@@ -165,7 +165,7 @@ describe('on the real flyovers', () => {
     expect(route.height[route.height.length - 1]).toBe(0)
   })
 
-  it.each(['car', 'boda', 'matatu'] as const)(
+  it.each(['car', 'boda', 'matatu', 'nganya'] as const)(
     'a %s drives up the ramp, along the deck and down the far side',
     (kind) => {
       const { world, fleet, vehicle } = setUp(kind)

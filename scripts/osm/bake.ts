@@ -40,7 +40,8 @@ import {
   type RoofShape,
   type ZoneRoad,
 } from '../../src/world/zone/format'
-import { LANDMARK_OVERRIDES } from './landmarks'
+import { FACADE } from '../../src/world/geometry/buildings'
+import { LANDMARK_OVERRIDES, LANDMARK_PARTS, type LandmarkLook } from './landmarks'
 import { computeElevations, type ElevWay } from './lib/elevation'
 import { LEVEL_HEIGHT, createHeightEstimator, taggedHeight, type KnownHeight } from './lib/heights'
 import { clipLine, lineLength, simplifyLine, simplifyRing, type P3 } from './lib/lines'
@@ -223,6 +224,10 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     if (override) {
       if (override.base !== undefined) b.base = override.base
       if (override.h !== undefined) b.h = override.h
+      if (override.guess) b.est = true
+      if (override.name) b.name = override.name
+      // Dropped pieces take no further part: hand-made ones stand in for them.
+      if (override.drop) b.skip = true
     }
   }
   const estimate = createHeightEstimator(known)
@@ -252,7 +257,7 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
   let outlinesReplaced = 0
   let partsHidden = 0
   for (const outline of raw) {
-    if (outline.isPart || LANDMARK_OVERRIDES[outline.id]?.keepOutline) continue
+    if (outline.skip || outline.isPart || LANDMARK_OVERRIDES[outline.id]?.keepOutline) continue
     const inside = parts.filter((p) => !p.skip && pointInRing(p.cx, p.cz, outline.outer))
     if (inside.length === 0) continue
     const grounded = inside.filter((p) => p.base < 1)
@@ -299,6 +304,18 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     }
   }
 
+  /** Write what a landmark touch-up says about a piece's look over what the tags gave. */
+  const applyLook = (out: ZoneBuilding, look: LandmarkLook): void => {
+    if (look.colour) out.c = look.colour
+    if (look.roofColour) out.rc = look.roofColour
+    if (look.facade) out.f = FACADE[look.facade]
+    if (look.taper !== undefined && look.taper !== 1) out.tp = look.taper
+    if (look.roof) {
+      out.rs = look.roof.shape
+      out.rh = round1(Math.min(look.roof.height, out.h - (out.b ?? 0)))
+    }
+  }
+
   const buildings: ZoneBuilding[] = []
   for (const b of raw) {
     if (b.skip) continue
@@ -322,7 +339,54 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     const roofColour = parseColour(b.tags['roof:colour'])
     if (roofColour) out.rc = roofColour
     if (b.est) out.est = 1
+    const override = LANDMARK_OVERRIDES[b.id]
+    if (override) applyLook(out, override)
     buildings.push(out)
+  }
+
+  // ---- hand-made landmark pieces (scripts/osm/landmarks.ts)
+  const rawById = new Map(raw.map((b) => [b.id, b]))
+  const unmatched: string[] = []
+  for (const id of Object.keys(LANDMARK_OVERRIDES)) {
+    if (!rawById.has(Number(id))) unmatched.push(`override ${id}`)
+  }
+  for (const part of LANDMARK_PARTS) {
+    let ring: number[]
+    if ('like' in part.outline) {
+      const model = rawById.get(part.outline.like)
+      if (!model) {
+        unmatched.push(`part ${part.id} (shaped like ${part.outline.like})`)
+        continue
+      }
+      const k = part.outline.scale ?? 1
+      ring = model.outer.map((value, i) => {
+        const centre = i % 2 === 0 ? model.cx : model.cz
+        return centre + (value - centre) * k
+      })
+    } else {
+      const { centre, radius, sides, turn = 0 } = part.outline
+      const [cx, cz] = proj.toWorld(centre.lat, centre.lon)
+      if (!rectContains(rect, cx, cz)) continue
+      ring = []
+      for (let k = 0; k < sides; k++) {
+        // Compass bearings: 0 is north (-z), 90 is east (+x).
+        const bearing = ((turn + (k * 360) / sides) * Math.PI) / 180
+        ring.push(cx + radius * Math.sin(bearing), cz - radius * Math.cos(bearing))
+      }
+    }
+    const outer = packRing(orient(ring, true), 0.02, 0.3)
+    if (!outer) continue
+    const out: ZoneBuilding = { id: part.id, p: outer, h: round1(part.h) }
+    if (part.base > 0) out.b = round1(part.base)
+    if (part.name) out.n = part.name
+    applyLook(out, part)
+    buildings.push(out)
+  }
+  if (unmatched.length) {
+    console.warn(
+      `    [landmarks] nothing in the map data matches: ${unmatched.join(', ')}. ` +
+        'Update scripts/osm/landmarks.ts.',
+    )
   }
 
   // =================================================================== roads

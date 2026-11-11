@@ -186,12 +186,18 @@ export function Hud() {
   )
 }
 
-/** "Matatu · Githurai 45": what the vehicle is and, if the map says, where it runs. */
+/**
+ * "Matatu · Githurai 45", "Nganya Moto · City Square": what the vehicle is, what it is
+ * called if it has a name and, if the map says, where it runs.
+ */
 function VehicleName({ vehicle }: { vehicle: VehicleTag }) {
   const t = useT()
   return (
     <span className="vehicle-name">
-      <strong>{t(vehicle.kind)}</strong>
+      <strong>
+        {t(vehicle.kind)}
+        {vehicle.name && ` ${vehicle.name}`}
+      </strong>
       {vehicle.label && <em>{vehicle.label}</em>}
     </span>
   )

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import type { ZoneBuilding } from '../zone/format'
-import { buildBuildingMesh, styleFor, type BuildingMesh } from './buildings'
+import { FACADE, buildBuildingMesh, styleFor, type BuildingMesh } from './buildings'
 
 /** Counts triangles whose winding disagrees with their vertex normals (they would render inside out). */
 function insideOut(mesh: BuildingMesh): number {
@@ -62,6 +62,38 @@ describe('building meshes', () => {
   it('keeps shop fronts off courts and ministries', () => {
     const court: ZoneBuilding = { ...box, n: 'Milimani Law Courts' }
     expect(styleFor(court).shop).toBe(0)
+  })
+
+  it('gives a landmark the facade the pipeline chose, and no shops', () => {
+    for (const facade of Object.values(FACADE)) {
+      const style = styleFor({ ...box, f: facade })
+      expect(style.facade).toBe(facade)
+      expect(style.shop).toBe(0)
+    }
+  })
+
+  it('leans the walls of a piece whose top is wider or narrower than its foot', () => {
+    // The box is 10 m x 20 m around (5, 10). Half as wide again at the top: a saucer.
+    for (const [tp, tilt] of [
+      [1.5, -1],
+      [0.5, 1],
+    ] as const) {
+      const mesh = buildBuildingMesh([{ ...box, b: 6, tp }], 10)
+      expect(insideOut(mesh)).toBe(0)
+      const { positions, normals } = mesh
+      let widest = 0
+      for (let i = 0; i < positions.length; i += 3) {
+        const y = positions[i + 1]
+        const fromCentre = Math.abs(positions[i] - 5)
+        // The foot keeps the footprint; only the top moves.
+        if (y === 6) expect(fromCentre).toBeCloseTo(5, 5)
+        else widest = Math.max(widest, fromCentre)
+        // Walls that lean out face a little downwards, walls that lean in a little upwards.
+        const wall = Math.abs(normals[i + 1]) < 0.999
+        if (wall) expect(Math.sign(normals[i + 1])).toBe(tilt)
+      }
+      expect(widest).toBeCloseTo(5 * tp, 5)
+    }
   })
 
   it('builds the whole CBD without inside-out faces or bad numbers', () => {

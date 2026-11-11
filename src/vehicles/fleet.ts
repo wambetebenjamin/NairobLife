@@ -22,14 +22,7 @@
  */
 import type { Collider, World } from '@dimforge/rapier3d-compat'
 import { PLAYER } from '../config/game'
-import {
-  BODA_PAINT,
-  CAR_PAINT,
-  MATATU_PAINT,
-  VEHICLES,
-  type VehicleKind,
-  type VehicleSpec,
-} from '../config/vehicles'
+import { LIVERIES, VEHICLES, type VehicleKind, type VehicleSpec } from '../config/vehicles'
 import { lerp, wrapAngle } from '../core/math'
 import { hexToLinear, type RGB } from '../world/geometry/palette'
 import { NOT_PLAYER_GROUPS, VEHICLE_GROUPS } from '../world/physics/groups'
@@ -67,7 +60,12 @@ export interface Vehicle {
   readonly spec: VehicleSpec
   /** Paint, as linear RGB. */
   readonly paint: RGB
-  /** Matatus: the route or SACCO of the stage it was parked at. */
+  /** The livery's second colour, as linear RGB, and how the two are patterned (LIVERY). */
+  readonly accent: RGB
+  readonly pattern: number
+  /** Nganyas: what it is called. */
+  readonly name?: string
+  /** Matatus and nganyas: the route or SACCO of the stage it was parked at. */
   readonly label?: string
   readonly state: VehicleState
   /** Where it was one physics step ago. The view draws somewhere between this and `state`. */
@@ -77,12 +75,6 @@ export interface Vehicle {
   /** Physics steps in a row that it has been standing still. */
   restSteps: number
   readonly collider: Collider
-}
-
-const PAINT: Record<VehicleKind, readonly string[]> = {
-  car: CAR_PAINT,
-  boda: BODA_PAINT,
-  matatu: MATATU_PAINT,
 }
 
 /** Gap between the road and the bottom of the collision box, so it clears kerbs and ramp feet. */
@@ -122,7 +114,8 @@ export class Fleet {
     const owners = new Map<number, number>()
     placements.forEach((placement, id) => {
       const spec = VEHICLES[placement.kind]
-      const colours = PAINT[placement.kind]
+      const liveries = LIVERIES[placement.kind]
+      const livery = liveries[placement.paint % liveries.length]
       const collider = world.createCollider(
         rapier.ColliderDesc.cuboid(
           spec.width / 2,
@@ -135,7 +128,10 @@ export class Fleet {
         id,
         kind: placement.kind,
         spec,
-        paint: hexToLinear(colours[placement.paint % colours.length]),
+        paint: hexToLinear(livery.base),
+        accent: hexToLinear(livery.accent),
+        pattern: livery.pattern,
+        name: placement.name,
         label: placement.label,
         state,
         previous: { x: state.x, y: state.y, z: state.z, yaw: state.yaw, pitch: 0 },

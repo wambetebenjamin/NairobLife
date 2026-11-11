@@ -1,7 +1,8 @@
 /**
  * A small kit for building low-poly models in code: flat-shaded faces, boxes, beams and
  * extruded side profiles. Every face has a colour, and may be marked as paintwork (it
- * takes the vehicle's own colour) or as a lamp (it can be lit).
+ * takes the vehicle's own livery), as trim in the livery's second colour, or as a lamp
+ * (it can be lit).
  *
  * Like the character, the vehicles have no model files. A car is forty lines of
  * measurements you can read and change, it costs nothing to download, and all its
@@ -17,21 +18,27 @@ import { hexToLinear, type RGB } from '../../world/geometry/palette'
 
 export type Vec3 = readonly [number, number, number]
 
-/** How a face is coloured: a fixed colour, or the vehicle's own paint. */
-export type Finish = string | typeof PAINT
+/** How a face is coloured: a fixed colour, the vehicle's own paint, or its second colour. */
+export type Finish = string | typeof PAINT | typeof ACCENT
 
-/** Use as a finish to take the colour each vehicle is painted. */
+/** Use as a finish to take each vehicle's livery: its paint, patterned if it has a pattern. */
 export const PAINT = Symbol('paint')
+/** Use as a finish to take the second colour of each vehicle's livery, unpatterned. */
+export const ACCENT = Symbol('accent')
 
-/** Which lamp a face belongs to. Stored per vertex as 0, 1 or 2. */
-export const LAMP = { none: 0, head: 1, tail: 2 } as const
+/**
+ * Which lamp a face belongs to. Head and tail lamps are lit vehicle by vehicle; `glow` is
+ * the lights a vehicle shows just for being out after dark (the strips down a nganya's
+ * skirts), lit on every vehicle at once.
+ */
+export const LAMP = { none: 0, head: 1, tail: 2, glow: 3 } as const
 export type Lamp = (typeof LAMP)[keyof typeof LAMP]
 
 const WHITE: RGB = [1, 1, 1]
 const cache = new Map<string, RGB>()
 
 function colourOf(finish: Finish): RGB {
-  if (finish === PAINT) return WHITE
+  if (typeof finish !== 'string') return WHITE
   let colour = cache.get(finish)
   if (!colour) {
     colour = hexToLinear(finish)
@@ -86,7 +93,7 @@ export class MeshBuilder {
       this.positions.push(corner[0], corner[1], corner[2])
       this.normals.push(nx, ny, nz)
       this.colours.push(colour[0], colour[1], colour[2])
-      this.paint.push(finish === PAINT ? 1 : 0)
+      this.paint.push(finish === PAINT ? 1 : finish === ACCENT ? 2 : 0)
       this.lamps.push(this.lamp)
     }
     this.count += corners.length
@@ -289,8 +296,8 @@ export class MeshBuilder {
 
   /**
    * The finished mesh. Besides the usual attributes it carries `paint` (1 on paintwork,
-   * 0 elsewhere) and `lamp` (see LAMP), which the vehicle material reads to tint and
-   * light each vehicle separately.
+   * 2 on trim in the second colour, 0 elsewhere) and `lamp` (see LAMP), which the vehicle
+   * material reads to paint and light each vehicle separately.
    */
   geometry(): BufferGeometry {
     const geometry = new BufferGeometry()

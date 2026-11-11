@@ -30,7 +30,8 @@ Phases 3 onwards are plans, not promises: nothing in them is built yet.
 - [x] Boda boda (nduthi): leans into corners, turns tighter than anything else
 - [x] Matatu: slow, heavy, with the yellow line; parked at the stages in the map data and
       carrying their names
-- [x] 328 vehicles parked at stages, in car parks, at fuel stations and along the kerbs
+- [x] Around 330 vehicles parked at stages, in car parks, at fuel stations and along the kerbs
+- [x] Drivable nganya with original procedural liveries, wing and decorative lights
 - [x] Speedometer and vehicle name in the HUD; touch controls for driving
 - [x] Headlights, tail lamps and brake lights on the vehicle you are driving
 - [x] Road paint: kerb lines, lane lines, zebra crossings and stop lines
@@ -40,7 +41,7 @@ Phases 3 onwards are plans, not promises: nothing in them is built yet.
 - [ ] Engine, tyre and horn sounds
 - [ ] Damage, and vehicles that can roll over (they cannot yet, so there is nothing to
       flip upright)
-- [ ] Matatu liveries: graffiti art and route boards
+- [ ] Detailed hand-painted matatu art and readable name and route boards
 - [ ] Load Rapier's WASM as its own file (saves download size)
 
 ## Phase 3: a living city

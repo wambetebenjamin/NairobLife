@@ -8,9 +8,9 @@
  * No DOM or three.js imports: the tests and (later) a server can read this file.
  */
 
-export type VehicleKind = 'car' | 'boda' | 'matatu'
+export type VehicleKind = 'car' | 'boda' | 'matatu' | 'nganya'
 
-export const VEHICLE_KINDS: readonly VehicleKind[] = ['car', 'boda', 'matatu']
+export const VEHICLE_KINDS: readonly VehicleKind[] = ['car', 'boda', 'matatu', 'nganya']
 
 export interface VehicleSpec {
   kind: VehicleKind
@@ -190,6 +190,44 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     seat: [0, 0],
     door: 1.65,
   },
+
+  /**
+   * A nganya: the 33-seater minibus Nairobi turns into rolling art, with a wing on the
+   * roof, a row of spotlights and lights down the skirts. Twice the weight of the
+   * 14-seater and the longest thing here; it needs the whole road to turn round.
+   */
+  nganya: {
+    kind: 'nganya',
+    length: 7.2,
+    width: 2.3,
+    height: 2.95,
+    wheelbase: 3.9,
+    track: 1.92,
+    wheelRadius: 0.42,
+    wheelWidth: 0.3,
+    mass: 30,
+    topSpeed: 27,
+    reverseSpeed: 6,
+    accel: 3.5,
+    brake: 8.6,
+    rolling: 1.0,
+    drag: 0.04,
+    grip: 9.2,
+    handbrakeGrip: 3.6,
+    steerLock: deg(38),
+    steerG: 7.2,
+    steerRate: 2.1,
+    yawResponse: 5.8,
+    roll: 0.016,
+    dive: 0.009,
+    circles: [-2.45, -1.225, 0, 1.225, 2.45],
+    circleRadius: 1.15,
+    camera: { distance: 12.6, height: 3.4 },
+    eye: [0, 2.2, 3.5],
+    openSeat: false,
+    seat: [0, 0],
+    door: 1.9,
+  },
 }
 
 /** Shared driving rules that do not vary by vehicle. */
@@ -229,7 +267,7 @@ export const CAR_PAINT: readonly string[] = [
   '#2f6fb0',
 ]
 
-/** Matatus are painted to be noticed. The yellow band along the side is the law. */
+/** Working matatus: mostly white, some bright. The yellow band along the side is the law. */
 export const MATATU_PAINT: readonly string[] = [
   '#f1f1ec',
   '#f1f1ec',
@@ -252,9 +290,98 @@ export const BODA_PAINT: readonly string[] = [
   '#2e7d32',
 ]
 
+/**
+ * How paintwork is patterned. A livery is two colours and one of these; the shader draws
+ * the pattern (vehicles/view/vehicleMaterials.ts), so the numbers must not change.
+ */
+export const LIVERY = {
+  /** One colour all over. */
+  plain: 0,
+  /** Slanted bars across the back two thirds. */
+  slash: 1,
+  /** A jagged edge rising from the skirts: flames, more or less. */
+  flames: 2,
+  /** Two-tone, parted along a wave. */
+  split: 3,
+  /** A patchwork of panels, the way airbrushed art reads from across the street. */
+  blocks: 4,
+  /** Zebra stripes. */
+  zebra: 5,
+} as const
+export type LiveryPattern = (typeof LIVERY)[keyof typeof LIVERY]
+
+export interface Livery {
+  /** Paint, as sRGB hex. */
+  base: string
+  /** The second colour: the pattern, the wing, the name board and the lights down the skirts. */
+  accent: string
+  pattern: LiveryPattern
+}
+
+const plain = (base: string): Livery => ({ base, accent: base, pattern: LIVERY.plain })
+
+/**
+ * Nganyas are painted by hand, every one different, and the art is somebody's work: we
+ * do not copy any of it. These are our own colour schemes in the same loud spirit.
+ */
+export const NGANYA_LIVERIES: readonly Livery[] = [
+  { base: '#d6341f', accent: '#f6c21a', pattern: LIVERY.flames },
+  { base: '#15171b', accent: '#19c2d8', pattern: LIVERY.slash },
+  { base: '#1f4fa8', accent: '#f2f2ee', pattern: LIVERY.split },
+  { base: '#6a2d91', accent: '#f08a1c', pattern: LIVERY.blocks },
+  { base: '#f2c211', accent: '#15171b', pattern: LIVERY.slash },
+  { base: '#1c8c4a', accent: '#f2f2ee', pattern: LIVERY.flames },
+  { base: '#e2571e', accent: '#15171b', pattern: LIVERY.blocks },
+  { base: '#f2f2ee', accent: '#d6341f', pattern: LIVERY.split },
+  { base: '#101216', accent: '#e0245e', pattern: LIVERY.flames },
+  { base: '#0f8f93', accent: '#f6c21a', pattern: LIVERY.slash },
+  { base: '#b5121b', accent: '#f2f2ee', pattern: LIVERY.blocks },
+  { base: '#27306f', accent: '#7ee04a', pattern: LIVERY.split },
+]
+
+/** The safari van outside every hotel: a 14-seater in zebra stripes. Rare on purpose. */
+export const SAFARI_VAN: Livery = { base: '#f1f1ec', accent: '#16181c', pattern: LIVERY.zebra }
+
+/**
+ * Every way each kind can be painted. A vehicle stores an index into its kind's list.
+ * Cars, bodas and working matatus are one colour; the art is on the nganyas.
+ */
+export const LIVERIES: Record<VehicleKind, readonly Livery[]> = {
+  car: CAR_PAINT.map(plain),
+  boda: BODA_PAINT.map(plain),
+  matatu: [...MATATU_PAINT.map(plain), SAFARI_VAN],
+  nganya: NGANYA_LIVERIES,
+}
+
+/**
+ * What a nganya is called, on its name board and in the HUD. Everyday Swahili and Sheng
+ * words (fire, thunder, lion, crew), not the names of real matatus.
+ */
+export const NGANYA_NAMES: readonly string[] = [
+  'Moto',
+  'Radi',
+  'Simba',
+  'Mbogi',
+  'Noma',
+  'Kali',
+  'Nyota',
+  'Rieng',
+  'Shwari',
+  'Dunda',
+  'Tufani',
+  'Chui',
+  'Fiti',
+  'Wazi',
+  'Kifaru',
+  'Ngoma',
+  'Bazenga',
+  'Mwewe',
+]
+
 /** How many of each kind the city holds at most. Keeps slow phones out of trouble. */
 export const FLEET_LIMITS: Record<VehicleKind, number> = {
   car: 240,
   boda: 70,
   matatu: 46,
+  nganya: 30,
 }

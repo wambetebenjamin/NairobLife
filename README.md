@@ -6,8 +6,8 @@
 
 kaNAIRO is an open-world game set in a 3D Nairobi built from real map data. This is
 **Phase 2**: you explore the Central Business District on foot, or at the wheel of a car,
-a boda boda or a matatu. Every street and building footprint comes from
-[OpenStreetMap](https://www.openstreetmap.org), so Kenyatta Avenue is where Kenyatta
+a boda boda, a 14-seat matatu or a larger nganya. Streets and most building footprints
+come from [OpenStreetMap](https://www.openstreetmap.org), so Kenyatta Avenue is where Kenyatta
 Avenue is, and KICC stands 105 m over City Square.
 
 The name is Kanairo, Sheng for Nairobi, written kaNAIRO. The project began as
@@ -18,13 +18,13 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 
 ## What is in it
 
-- **The real CBD**, about 2.3 km square: 3,065 buildings, 162 named streets, Uhuru Park,
-  Central Park, Jeevanjee Gardens and the University of Nairobi main campus.
+- **The real CBD**, about 2.3 km square: about 3,000 mapped buildings, 162 named streets,
+  Uhuru Park, Central Park, Jeevanjee Gardens and the University of Nairobi main campus.
 - **On foot**: jog, sprint, jump, crouch. You collide with every building and can walk up
   onto the flyovers and footbridges.
-- **Three vehicles to drive**: a car, a boda boda and a matatu, each with its own
-  handling. 328 of them are parked around the CBD: in the car parks, along the kerbs, at
-  the fuel stations, and a matatu at every named stage, carrying the stage's name. Walk up
+- **Four vehicles to drive**: a car, a boda boda, a 14-seat matatu and a larger
+  nganya, each with its own handling. Around 330 are parked around the CBD: in car parks,
+  along the kerbs, at fuel stations, and a matatu at every named stage, carrying the stage's name. Walk up
   to one and press `F`. They are parked on the left, facing the way traffic runs, and the
   driver gets out on the right, as in Kenya.
 - **Roads that read as roads**: kerb lines (black and white on the main streets), lane
@@ -99,13 +99,15 @@ and **Get out**.
 
 |           | Top speed | 0 to 100 km/h | Stops from 100 km/h in | Tightest turn (radius) |
 | --------- | --------- | ------------- | ---------------------- | ---------------------- |
-| Car       | 137 km/h  | 5.5 s         | 30 m                   | 7.3 m                  |
-| Boda boda | 112 km/h  | 5.2 s         | 37 m                   | 4.4 m                  |
-| Matatu    | 104 km/h  | 12.6 s        | 40 m                   | 7.7 m                  |
+| Car       | 137 km/h  | 5.5 s         | 30 m                   | 3.7 m                  |
+| Boda boda | 112 km/h  | 5.2 s         | 37 m                   | 2.2 m                  |
+| Matatu    | 104 km/h  | 12.6 s        | 40 m                   | 3.9 m                  |
+| Nganya    | 97 km/h   | Not reached   | 42 m from 97 km/h      | 5.1 m                  |
 
 The boda leans into corners and slips through gaps. The matatu is slow off the line and
-heavy enough to shove a parked car out of its way. The handbrake breaks the tyres' grip,
-so pull it in a corner to slide. All the handling numbers are in
+heavy enough to shove a parked car out of its way. Nganyas wear original procedural
+patterns, roof lights and wings inspired by Nairobi matatu culture. The handbrake breaks
+the tyres' grip, so pull it in a corner to slide. All the handling numbers are in
 [`src/config/vehicles.ts`](src/config/vehicles.ts).
 
 ## How it works, in one minute
@@ -166,12 +168,12 @@ ground. To add a district, see "Adding a zone" in [`docs/DATA.md`](docs/DATA.md)
   gaps: the Nairobi River is missing, and parts of the Expressway sit on the ground.
   Running `npm run osm:fetch -- nairobi-cbd && npm run osm:bake` fixes this.
   Details in [`data/osm/README.md`](data/osm/README.md).
-- **Most building heights are estimates.** OpenStreetMap gives a height for 244 of the
-  3,065 buildings (the towers, mostly). The rest are guessed from footprint size and
-  neighbours, so the skyline is right and the side streets are plausible.
+- **Most building heights are estimates.** In the original snapshot, 244 of 3,065 mapped
+  building pieces have a height from OpenStreetMap. The rest are estimates based on
+  footprint size and neighbours; landmark additions are approximations too.
 - **The ground is flat.** The real CBD drops about 30 m from Upper Hill to the river.
-- **Landmarks are generic.** KICC has its crown and the amphitheatre its cone, but there
-  are no hand-made models yet: Parliament has no clock tower and Jamia Mosque no domes.
+- **Landmarks are approximate.** KICC, Times Tower and Parliament have hand-tuned
+  details based on reference footage, not surveyed models. Jamia Mosque still has no domes.
 - **Driving is arcade, not simulation.** Vehicles cannot roll over, take no damage and
   make no sound. Kerbs are painted lines, not steps. Nothing else moves yet: every other
   vehicle is parked.

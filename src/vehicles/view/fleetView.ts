@@ -38,6 +38,7 @@ import {
   createUnderShadowMaterial,
   createVehicleMaterial,
   createWheelMaterial,
+  vehicleUniforms,
 } from './vehicleMaterials'
 
 /** How far out each tier reaches, in metres from the camera. */
@@ -56,6 +57,8 @@ const TAIL_LAMPS_ON = 0.9
 const BRAKE_LAMPS = 2.6
 /** Lamps come on when the sky is this dark (0 day .. 1 night). */
 const LAMPS_ON_AT = 0.3
+/** The lights a nganya wears after dark, parked or not: how bright, at full night. */
+const GLOW_AT_NIGHT = 1.7
 
 /**
  * The driven vehicle's headlights on the road: one cone of light from the nose, with no
@@ -84,6 +87,8 @@ const SHADE_SPREAD = 0.5
 interface Tier {
   mesh: InstancedMesh
   lamps: InstancedBufferAttribute
+  /** Per instance: the livery's second colour, and its pattern. */
+  livery: InstancedBufferAttribute
   count: number
 }
 
@@ -149,7 +154,10 @@ export class FleetView {
     const shade = createUnderShadowMaterial()
     this.materials = [paint, tyre, shade]
 
-    const counts: Record<VehicleKind, number> = { car: 0, boda: 0, matatu: 0 }
+    const counts = Object.fromEntries(VEHICLE_KINDS.map((kind) => [kind, 0])) as Record<
+      VehicleKind,
+      number
+    >
     let wheelTotal = 0
     const models = {} as Record<VehicleKind, VehicleModel>
     for (const kind of VEHICLE_KINDS) models[kind] = buildVehicleModel(kind)
@@ -173,6 +181,8 @@ export class FleetView {
         geometry.setIndex(model.body.index)
         const lamps = new InstancedBufferAttribute(new Float32Array(capacity * 2), 2)
         geometry.setAttribute('lamps', lamps)
+        const livery = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4)
+        geometry.setAttribute('livery', livery)
         this.geometries.push(geometry)
 
         const mesh = new InstancedMesh(geometry, paint, capacity)
@@ -185,7 +195,7 @@ export class FleetView {
         mesh.receiveShadow = true
         mesh.name = `${kind}:${shadows ? 'near' : 'far'}`
         this.group.add(mesh)
-        return { mesh, lamps, count: 0 }
+        return { mesh, lamps, livery, count: 0 }
       }
       this.kinds[kind] = { model, near: tier(true), far: tier(false) }
     }
@@ -266,6 +276,7 @@ export class FleetView {
         flag(part.mesh.instanceMatrix, part.count)
         flag(part.mesh.instanceColor!, part.count)
         flag(part.lamps, part.count)
+        flag(part.livery, part.count)
       }
     }
     this.wheels.count = this.wheelCount
@@ -285,6 +296,7 @@ export class FleetView {
   update(alpha: number, dt: number, driven: number, night: number, out: Pose): Pose | undefined {
     let drawn: Pose | undefined
     let beam = 0
+    vehicleUniforms.uGlow.value = GLOW_AT_NIGHT * clamp((night - LAMPS_ON_AT + 0.1) / 0.2, 0, 1)
     const awake = this.fleet.awake
     if (awake.length === 0) {
       this.beam.intensity = 0
@@ -399,6 +411,11 @@ export class FleetView {
     colours[slot * 3 + 2] = vehicle.paint[2]
     part.lamps.array[slot * 2] = headlamps
     part.lamps.array[slot * 2 + 1] = tailLamps
+    const livery = part.livery.array
+    livery[slot * 4] = vehicle.accent[0]
+    livery[slot * 4 + 1] = vehicle.accent[1]
+    livery[slot * 4 + 2] = vehicle.accent[2]
+    livery[slot * 4 + 3] = vehicle.pattern
     if (!near) return
 
     // ---- wheels: on four wheels they stay on the road; on two they lean with the bike

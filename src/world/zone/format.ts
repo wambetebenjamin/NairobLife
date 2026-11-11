@@ -80,6 +80,17 @@ export interface ZoneBuilding {
   rs?: RoofShape
   /** Height of that roof in metres, included in `h` (walls stop at h - rh). */
   rh?: number
+  /**
+   * How wide the top of the walls is compared with the footprint, measured from its
+   * centre. Absent means 1: straight walls. Above 1 the piece flares out as it rises (the
+   * underside of the KICC saucer); below 1 it narrows.
+   */
+  tp?: number
+  /**
+   * Facade style, when the pipeline knows better than the game's guess (a landmark): an
+   * index into FACADE in geometry/buildings.ts.
+   */
+  f?: number
   /** 1 when the height is our estimate (OSM had neither height nor levels). */
   est?: 1
 }

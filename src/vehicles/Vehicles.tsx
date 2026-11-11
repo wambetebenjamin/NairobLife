@@ -175,7 +175,7 @@ export function Vehicles({ zone, start }: { zone: LoadedZone; start?: StartSpot 
       const id = near ? near.id : -1
       if (id !== timers.near) {
         timers.near = id
-        game.setNearVehicle(near ? { kind: near.kind, label: near.label } : null)
+        game.setNearVehicle(near ? { kind: near.kind, name: near.name, label: near.label } : null)
       }
     }
   }, -30)

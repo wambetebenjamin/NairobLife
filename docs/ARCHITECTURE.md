@@ -98,7 +98,7 @@ Set with `useFrame` priorities in `GameCanvas.tsx`. Lower numbers run first.
 - **Buildings** are extruded footprints. One material draws every facade: the mesh
   carries a "window grid" coordinate and a style number per wall, and a small shader patch
   on top of three's Lambert material draws windows, shopfronts and night lighting from
-  them. No textures.
+  them. Landmark pieces may flare at the top and can override their facade style. No textures.
 - **The ground** is one large plane plus a single "decal" mesh of roads, pavements, parks
   and water, painted in a fixed order so layers never flicker against each other.
 - **Raised roads** (flyovers, footbridges, the Expressway) are real geometry with ramps,
@@ -137,11 +137,12 @@ other's insides:
   queue at the stages with boda bodas waiting beside them, cars stand in the car parks
   and along the kerbs, the fuel stations get a couple of each, and one of each kind is
   left in front of the player at the start. The same zone always gives the same plan.
-- **How they are drawn** (`view/`, `models/`). The three models are built in code. Every
-  vehicle of a kind shares one mesh, so the whole fleet is eight instanced meshes however
+- **How they are drawn** (`view/`, `models/`). The four models are built in code. Every
+  vehicle of a kind shares one mesh, so the whole fleet is ten instanced meshes however
   many vehicles there are. Near the camera a vehicle gets wheels, a patch of shade and a
   sun shadow; further off, just the body; beyond that, nothing. Only the vehicles that
-  are awake are touched each frame.
+  are awake are touched each frame. A shader paints original procedural nganya liveries
+  from per-instance colours; parked nganyas have glowing decorative lights after dark.
 
 `driving.ts` handles getting in and out. `runtime.driving` holds the id of the vehicle
 being driven, or −1, and is the one fact everything else reads: the fleet (who gets the
@@ -177,7 +178,7 @@ Rapier's ray-cast vehicle. Phase 2 wrote a small arcade model instead, for four 
 The feel is a table of plain numbers in `config/vehicles.ts` (top speed, grip, turning
 circle), not spring and friction settings to be coaxed. It behaves the same at 30, 60 and
 144 steps a second, and runs without a physics engine, so it is tested in Node. A parked
-vehicle is a box that costs nothing, which is what lets 328 of them stand around the
+vehicle is a box that costs nothing, which is what lets hundreds of them stand around the
 city. And a vehicle's whole state is a dozen numbers, which is what multiplayer will want
 to send. The price: no suspension, no roll-overs and no damage. Those would need a real
 rigid body, and could be added for the one vehicle being driven without touching the
@@ -231,15 +232,15 @@ exposes the store, the runtime state, the actions, the fleet and the three.js sc
 
 Search the code for `TODO(` followed by a topic:
 
-| Marker              | Where                                               | What goes there                                       |
-| ------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| `TODO(traffic)`     | `World.tsx`, `vehicles/fleet.ts`                    | A road graph, and drivers other than the player       |
-| `TODO(matatus)`     | `World.tsx`, `TeleportMenu.tsx`, `vehicleModels.ts` | Routes between the stages; liveries and route boards  |
-| `TODO(pedestrians)` | `World.tsx`                                         | Crowds on pavements                                   |
-| `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs; lane lines on the flyover decks         |
-| `TODO(multiplayer)` | `vehicles/fleet.ts`, `MainMenu.tsx`                 | What a server would send for the vehicles             |
-| `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback |
-| `TODO(terrain)`     | `Ground.tsx`, `config/zones.ts`                     | Height field under the decals                         |
-| `TODO(landmarks)`   | `scripts/osm/landmarks.ts`                          | Hand-made models for the icons                        |
-| `TODO(gamepad)`     | `config/controls.ts`                                | Map a controller onto the same actions                |
-| `TODO(sheng)`       | `config/strings.ts`, `Hud.tsx`                      | A native speaker's pass over the draft                |
+| Marker              | Where                                               | What goes there                                        |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------ |
+| `TODO(traffic)`     | `World.tsx`, `vehicles/fleet.ts`                    | A road graph, and drivers other than the player        |
+| `TODO(matatus)`     | `World.tsx`, `TeleportMenu.tsx`, `vehicleModels.ts` | Routes between stages; text on livery and route boards |
+| `TODO(pedestrians)` | `World.tsx`                                         | Crowds on pavements                                    |
+| `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs; lane lines on the flyover decks          |
+| `TODO(multiplayer)` | `vehicles/fleet.ts`, `MainMenu.tsx`                 | What a server would send for the vehicles              |
+| `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback  |
+| `TODO(terrain)`     | `Ground.tsx`, `config/zones.ts`                     | Height field under the decals                          |
+| `TODO(landmarks)`   | `scripts/osm/landmarks.ts`                          | Hand-made models for the icons                         |
+| `TODO(gamepad)`     | `config/controls.ts`                                | Map a controller onto the same actions                 |
+| `TODO(sheng)`       | `config/strings.ts`, `Hud.tsx`                      | A native speaker's pass over the draft                 |

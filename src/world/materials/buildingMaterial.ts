@@ -8,7 +8,8 @@
  *   uv.x counts window bays along the wall, uv.y counts floors
  *   facade = (random seed, style, has ground-floor shops)
  *
- * Styles: 0 blank, 1 punched windows, 2 ribbon windows, 3 glass curtain wall.
+ * Styles: 0 blank, 1 punched windows, 2 ribbon windows, 3 glass curtain wall, 4 glass in
+ * tall strips between piers (FACADE in geometry/buildings.ts).
  * At night a share of the windows light up, whole floors at a time in the offices.
  *
  * TODO(art): signage. The ground-floor bands already carry hand-painted shop-sign
@@ -97,11 +98,17 @@ const FRAGMENT_MAIN = /* glsl */ `
       float sill = mix(0.34, 0.46, trait);
       glass = nlBand(0.03, 0.97, f.x, e.x) * nlBand(sill, 0.88, f.y, e.y);
       average = 0.94 * (0.88 - sill);
-    } else {
+    } else if (style < 3.5) {
       // Curtain wall: glass from slab to slab.
       float frame = mix(0.03, 0.06, trait);
       glass = nlBand(frame, 1.0 - frame, f.x, e.x) * nlBand(0.07, 0.93, f.y, e.y);
       average = (1.0 - 2.0 * frame) * 0.86;
+    } else {
+      // Piers: glass in strips that run the height of the wall, with solid piers between
+      // them and only a hairline at each floor.
+      float pier = mix(0.17, 0.27, trait);
+      glass = nlBand(pier, 1.0 - pier, f.x, e.x) * nlBand(0.05, 0.97, f.y, e.y);
+      average = (1.0 - 2.0 * pier) * 0.92;
     }
 
     vec3 wall = diffuseColor.rgb;
@@ -111,7 +118,7 @@ const FRAGMENT_MAIN = /* glsl */ `
     // whether the wall is in sun or shade; it is added as light further down.
     vec3 pane = vec3(0.022, 0.025, 0.03) * (0.6 + 0.8 * tone);
     vec3 mirror = uGlass * 0.11 * (0.5 + tone);
-    if (style > 2.5) {
+    if (style > 2.5 && style < 3.5) {
       // Curtain wall: the vertex colour is the tint of the glass; the frame is its shadow.
       vec3 tint = wall / max(dot(wall, vec3(0.2126, 0.7152, 0.0722)), 0.04);
       pane = wall * 0.3 * (0.8 + 0.4 * tone);
@@ -172,6 +179,6 @@ export function createBuildingMaterial(): MeshLambertMaterial {
       .replace('#include <color_fragment>', `#include <color_fragment>\n${FRAGMENT_MAIN}`)
   }
   // Without this three would reuse the stock Lambert program and skip the patch.
-  material.customProgramCacheKey = () => 'kanairo-facade-v3'
+  material.customProgramCacheKey = () => 'kanairo-facade-v4'
   return material
 }

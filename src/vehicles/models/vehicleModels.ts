@@ -1,19 +1,21 @@
 /**
- * The three vehicles, as geometry built in code.
+ * The vehicles, as geometry built in code.
  *
- * Each model is one mesh. Its faces are marked as paintwork (tinted per vehicle), head
- * lamp or tail lamp (lit per vehicle: on at night, brighter under braking), or neither.
+ * Each model is one mesh. Its faces are marked as paintwork (each vehicle's own livery),
+ * as trim in the livery's second colour, as a head or tail lamp (lit per vehicle: on at
+ * night, brighter under braking), as a light that glows after dark, or as none of these.
  * Wheels are one shared shape, placed and sized per vehicle.
  *
  * Sizes come from config/vehicles.ts, so a model can never disagree with the collision
  * shape or the handling about how long the vehicle is.
  *
  * TODO(art): hand-made glTF models, with these as the instant-loading fallback.
- * TODO(matatus): graffiti liveries and route boards, the things a real mat is known by.
+ * TODO(matatus): the name in letters on the board down each side, and route numbers on
+ * the windscreen. The board is there, in the livery's second colour; it has no text yet.
  */
 import type { BufferGeometry } from 'three'
 import { MATATU_BAND, VEHICLES, type VehicleKind, type VehicleSpec } from '../../config/vehicles'
-import { LAMP, MeshBuilder, PAINT, type Finish } from './meshBuilder'
+import { ACCENT, LAMP, MeshBuilder, PAINT, type Finish } from './meshBuilder'
 
 const GLASS = '#17222c'
 const TRIM = '#1c1e21'
@@ -28,6 +30,9 @@ const PLATE_FRONT = '#ecece6'
 const PLATE_REAR = '#e6bd18'
 const HEADLAMP = '#fff3d4'
 const TAIL_LAMP = '#ff2616'
+/** The amber marker lights along the roof of anything big. */
+const MARKER = '#ffb21f'
+const CHEVRON_YELLOW = '#f2c211'
 
 export interface VehicleModel {
   body: BufferGeometry
@@ -232,6 +237,141 @@ function buildMatatu(): VehicleModel {
   return { body: body.geometry(), wheels: fourWheels(spec) }
 }
 
+// ---------------------------------------------------------------------------- nganya
+
+/**
+ * A 33-seater on a light lorry chassis, dressed the way the streets dress them: a wing
+ * over the tail, spotlights over the cab, a board down each side for the name, marker
+ * lights along the roof and a strip of light under each skirt.
+ */
+function buildNganya(): VehicleModel {
+  const spec = VEHICLES.nganya
+  const half = spec.width / 2
+  const nose = spec.length / 2
+  const axle = spec.wheelbase / 2
+  const roof = spec.height
+  const sill = 0.46
+  const belt = 1.38
+  const body = new MeshBuilder()
+
+  // Below the windows: slab sides and a flat nose, the cab sitting over the engine.
+  const profile: [number, number][] = [
+    [nose - 0.06, sill],
+    [nose, 0.66],
+    [nose, belt - 0.06],
+    [nose - 0.04, belt],
+    [-nose + 0.04, belt],
+    [-nose, 0.78],
+    [-nose + 0.07, sill],
+    ...wheelArch(spec, -axle, sill),
+    ...wheelArch(spec, axle, sill),
+  ]
+  const finishes: Finish[] = [TRIM, PAINT, PAINT, PAINT, PAINT, TRIM]
+  body.extrude(profile, half, (i) => finishes[i] ?? UNDERSIDE, PAINT)
+  wheelWells(body, spec, sill)
+
+  body.cabin(
+    {
+      baseFront: [nose - 0.04, belt],
+      baseRear: [-nose + 0.04, belt],
+      roofFront: [nose - 0.42, roof - 0.06],
+      roofRear: [-nose + 0.06, roof],
+      baseHalfWidth: half - 0.01,
+      roofHalfWidth: half - 0.05,
+    },
+    { front: GLASS, rear: PAINT, sides: PAINT, roof: PAINT },
+  )
+
+  // ---- sides: the cab window, five passenger windows, and the name board above them
+  const windows: [number, number][] = [
+    [3.05, 2.25],
+    [2.05, 1.19],
+    [1.05, 0.19],
+    [0.05, -0.81],
+    [-0.95, -1.81],
+    [-1.95, -2.81],
+  ]
+  for (const side of [1, -1]) {
+    for (const [front, rear] of windows) {
+      body.box([side * (half - 0.02), 1.96, -(front + rear) / 2], [0.05, 0.8, front - rear], GLASS)
+    }
+    body.box([side * (half + 0.004), 1.5, 0], [0.02, 0.05, spec.length - 0.5], CHROME)
+    body.box([side * (half - 0.035), 2.62, 0.4], [0.05, 0.36, 5], ACCENT)
+    // Mirrors, out on arms where a bus driver can see down the whole side.
+    body.beam(
+      [side * half, 2.0, -(nose - 0.5)],
+      [side * (half + 0.24), 2.06, -(nose - 0.24)],
+      0.04,
+      0.04,
+      TRIM,
+    )
+    body.box([side * (half + 0.27), 1.92, -(nose - 0.22)], [0.08, 0.42, 0.14], TRIM)
+    // Marker lights along the roof, and a strip of light under the skirt.
+    body.lamp = LAMP.glow
+    for (const forward of [2.6, 1.3, 0, -1.3, -2.6]) {
+      body.box([side * (half - 0.13), roof + 0.02, -forward], [0.12, 0.06, 0.22], MARKER)
+    }
+    body.box([side * (half - 0.01), sill + 0.03, 0], [0.05, 0.08, 2.9], ACCENT)
+    body.lamp = LAMP.none
+  }
+  // The step up to the door: the kerb side is the left, because Kenya drives on the left.
+  body.box([-(half - 0.01), 0.62, -2.65], [0.04, 0.32, 0.76], UNDERSIDE)
+
+  // ---- nose: header board, grille, hazard chevrons, plate
+  body.box([0, 2.68, -(nose - 0.36)], [spec.width - 0.24, 0.36, 0.1], ACCENT)
+  body.box([0, 0.98, -nose - 0.005], [1.1, 0.3, 0.03], CHROME)
+  for (let k = 0; k < 6; k++) {
+    body.box(
+      [-0.75 + k * 0.3, 0.58, -nose - 0.012],
+      [0.3, 0.1, 0.03],
+      k % 2 ? TRIM : CHEVRON_YELLOW,
+    )
+  }
+  body.box([0, 0.76, -nose - 0.006], [0.46, 0.11, 0.02], PLATE_FRONT)
+
+  // ---- roof: a bar of spotlights over the cab
+  const bar = -(nose - 0.78)
+  body.beam([-0.98, roof + 0.2, bar], [0.98, roof + 0.2, bar], 0.05, 0.05, TRIM)
+  for (const side of [1, -1]) {
+    body.beam(
+      [side * 0.9, roof - 0.04, bar + 0.18],
+      [side * 0.9, roof + 0.2, bar],
+      0.04,
+      0.04,
+      TRIM,
+    )
+  }
+  body.box([0, roof + 0.04, 0.7], [0.8, 0.08, 0.8], TRIM)
+
+  // ---- tail: window, plate, and the wing
+  body.box([0, 2.0, nose - 0.045], [1.5, 0.62, 0.05], GLASS)
+  body.box([0, 0.98, nose + 0.005], [0.46, 0.11, 0.02], PLATE_REAR)
+  for (const side of [1, -1]) {
+    body.beam(
+      [side * 0.8, roof - 0.02, nose - 0.55],
+      [side * 0.8, roof + 0.44, nose - 0.2],
+      0.07,
+      0.12,
+      ACCENT,
+    )
+    body.box([side * (half - 0.03), roof + 0.4, nose - 0.12], [0.05, 0.3, 0.84], ACCENT)
+  }
+  body.box([0, roof + 0.47, nose - 0.12], [spec.width - 0.1, 0.07, 0.78], ACCENT)
+
+  for (const side of [1, -1]) {
+    body.lamp = LAMP.head
+    body.box([side * 0.82, 0.98, -nose + 0.03], [0.34, 0.2, 0.1], HEADLAMP)
+    for (const x of [0.16, 0.48, 0.8]) {
+      body.box([side * x, roof + 0.2, bar - 0.05], [0.2, 0.2, 0.08], HEADLAMP)
+    }
+    body.lamp = LAMP.tail
+    body.box([side * 0.98, 1.16, nose - 0.01], [0.16, 0.66, 0.07], TAIL_LAMP)
+  }
+  body.lamp = LAMP.none
+
+  return { body: body.geometry(), wheels: fourWheels(spec) }
+}
+
 // ---------------------------------------------------------------------------- boda boda
 
 function buildBoda(): VehicleModel {
@@ -327,6 +467,7 @@ const builders: Record<VehicleKind, () => VehicleModel> = {
   car: buildCar,
   boda: buildBoda,
   matatu: buildMatatu,
+  nganya: buildNganya,
 }
 
 export function buildVehicleModel(kind: VehicleKind): VehicleModel {

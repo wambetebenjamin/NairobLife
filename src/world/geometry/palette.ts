@@ -130,7 +130,20 @@ export const AREA_COLOURS = {
 
 // ------------------------------------------------------------------ trees
 
-export const TREE_GREENS = palette('#4f7d3a', '#5d8a3f', '#3f6e36', '#6b9446', '#47733f', '#59803a')
+/**
+ * Leaf greens. The last two are the yellow-olive of the fever trees (yellow-barked
+ * acacias) that shade the parks and the roads around Parliament.
+ */
+export const TREE_GREENS = palette(
+  '#4f7d3a',
+  '#5d8a3f',
+  '#3f6e36',
+  '#6b9446',
+  '#47733f',
+  '#59803a',
+  '#7c8a3c',
+  '#8a8d47',
+)
 /** Jacaranda in bloom: Nairobi turns purple every October and November. */
 export const TREE_JACARANDA = palette('#8f6fc4', '#a07fd0', '#7f62b5')
 /** Nandi flame. */

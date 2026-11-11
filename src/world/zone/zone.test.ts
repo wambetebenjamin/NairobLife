@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { WORLD_ORIGIN, getZone } from '../../config/zones'
 import { createProjection } from '../../core/geo'
-import { signedArea } from '../../core/geom2d'
+import { pointInRing, signedArea } from '../../core/geom2d'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import { buildGroundMesh } from '../geometry/ground'
 import { buildRaisedRoads } from '../geometry/raisedRoads'
@@ -61,6 +61,30 @@ describe('baked CBD zone', () => {
     expect(kicc.length).toBeGreaterThan(0)
     expect(Math.max(...kicc.map((building) => building.h))).toBe(105)
     expect(index.buildingAt(0, 0)).toBeDefined()
+  })
+
+  it('crowns KICC with a saucer wider than its shaft', () => {
+    const at = (x: number, z: number) =>
+      zone.buildings.filter((building) => pointInRing(x * Q, z * Q, building.p))
+    // Over the middle of the tower: the shaft, the recessed floor, the saucer and its rim.
+    const stack = at(1, 6).sort((a, b) => (a.b ?? 0) - (b.b ?? 0))
+    expect(stack.map((piece) => [piece.b ?? 0, piece.h])).toEqual([
+      [0, 94],
+      [94, 97.5],
+      [97.5, 102.5],
+      [102.5, 105],
+    ])
+    expect(stack[2].tp).toBeGreaterThan(1)
+    // 19 m from the middle is past the shaft (17 m) but under the rim (21 m).
+    expect(at(1, 6 + 19).map((piece) => piece.h)).toEqual([105])
+  })
+
+  it('has the landmarks the skyline is known by', () => {
+    const named = (name: string) => zone.buildings.find((building) => building.n === name)
+    expect(named('Times Tower')?.h).toBe(140)
+    expect(named('Parliament clock tower')?.h).toBe(40)
+    expect(named('KICC Amphitheater')?.rs).toBe('cone')
+    expect(named('Bunge Tower')?.f).toBeDefined()
   })
 
   it('knows its streets: Kenyatta Avenue is west of Moi Avenue', () => {

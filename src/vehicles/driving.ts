@@ -38,7 +38,7 @@ export function beginDriving(fleet: Fleet, vehicle: Vehicle): void {
   // Space was "jump" a moment ago; do not let a queued jump fire when we get out.
   input.consumeJump()
   const game = useGame.getState()
-  game.setDriving({ kind: vehicle.kind, label: vehicle.label })
+  game.setDriving({ kind: vehicle.kind, name: vehicle.name, label: vehicle.label })
   if (!helpShown) {
     helpShown = true
     say(game.touch ? 'drivingHelpTouch' : 'drivingHelp')

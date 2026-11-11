@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { START_LANDMARK } from '../config/game'
 import { getLandmark } from '../config/landmarks'
 import {
-  BODA_PAINT,
-  CAR_PAINT,
   FLEET_LIMITS,
-  MATATU_PAINT,
+  LIVERIES,
+  LIVERY,
+  NGANYA_NAMES,
   VEHICLES,
   VEHICLE_KINDS,
   type VehicleKind,
@@ -58,7 +58,10 @@ describe('planFleet on the baked CBD', () => {
   it('fills the city without going over budget', () => {
     for (const kind of VEHICLE_KINDS) expect(count(kind)).toBeLessThanOrEqual(FLEET_LIMITS[kind])
     expect(count('car')).toBeGreaterThan(150)
-    expect(count('matatu')).toBeGreaterThan(30)
+    // The stages hold a mix of 14-seaters and nganyas.
+    expect(count('matatu')).toBeGreaterThan(18)
+    expect(count('nganya')).toBeGreaterThan(10)
+    expect(count('matatu') + count('nganya')).toBeGreaterThan(36)
     expect(count('boda')).toBeGreaterThan(25)
   })
 
@@ -109,12 +112,12 @@ describe('planFleet on the baked CBD', () => {
   })
 
   it('leaves one of each kind in view where a new game starts', () => {
-    const starters = plan.slice(0, 3)
-    expect(starters.map((p) => p.kind).sort()).toEqual(['boda', 'car', 'matatu'])
+    const starters = plan.slice(0, 4)
+    expect(starters.map((p) => p.kind).sort()).toEqual(['boda', 'car', 'matatu', 'nganya'])
     for (const p of starters) {
       const dx = p.x - start.x
       const dz = p.z - start.z
-      expect(Math.hypot(dx, dz)).toBeLessThan(25)
+      expect(Math.hypot(dx, dz)).toBeLessThan(30)
       expect(Math.hypot(dx, dz)).toBeGreaterThan(4)
       // Ahead of the player, not behind: the first thing they see.
       expect(dx * -Math.sin(start.yaw) + dz * -Math.cos(start.yaw)).toBeGreaterThan(3)
@@ -122,14 +125,30 @@ describe('planFleet on the baked CBD', () => {
   })
 
   it('puts a matatu at every named stage, carrying its route', () => {
-    const labels = new Set(plan.filter((p) => p.kind === 'matatu').map((p) => p.label))
+    const runsRoutes = (p: Placement) => p.kind === 'matatu' || p.kind === 'nganya'
+    const labels = new Set(plan.filter(runsRoutes).map((p) => p.label))
     const stages = zone.pois.filter((poi) => poi.k === 'stage' && (poi.r ?? poi.n))
     expect(stages.length).toBeGreaterThan(15)
     for (const stage of stages) expect(labels, stage.n).toContain(stage.r ?? stage.n)
     expect(labels).toContain('Githurai 45')
     expect(labels).toContain('Kencom')
-    // Labels belong to matatus only.
-    expect(plan.some((p) => p.kind !== 'matatu' && p.label)).toBe(false)
+    // Routes belong to matatus and nganyas only.
+    expect(plan.some((p) => !runsRoutes(p) && p.label)).toBe(false)
+  })
+
+  it('names every nganya, and nothing else', () => {
+    for (const p of plan) {
+      if (p.kind === 'nganya') expect(NGANYA_NAMES).toContain(p.name)
+      else expect(p.name).toBeUndefined()
+    }
+    // The one waiting at the start is Moto: fire, to go with its flames.
+    const starter = plan.slice(0, 4).find((p) => p.kind === 'nganya')
+    expect(starter?.name).toBe('Moto')
+    expect(LIVERIES.nganya[starter?.paint ?? -1].pattern).toBe(LIVERY.flames)
+    // Many names and many paint jobs, not one copied thirty times.
+    const nganyas = plan.filter((p) => p.kind === 'nganya')
+    expect(new Set(nganyas.map((p) => p.name)).size).toBeGreaterThan(6)
+    expect(new Set(nganyas.map((p) => p.paint)).size).toBeGreaterThan(5)
   })
 
   it('parks matatus within a short walk of their stage', () => {
@@ -146,14 +165,18 @@ describe('planFleet on the baked CBD', () => {
   })
 
   it('gives every vehicle a colour from its own list and a tidy position', () => {
-    const paints = { car: CAR_PAINT, boda: BODA_PAINT, matatu: MATATU_PAINT }
     for (const p of plan) {
       expect(Number.isInteger(p.paint)).toBe(true)
       expect(p.paint).toBeGreaterThanOrEqual(0)
-      expect(p.paint).toBeLessThan(paints[p.kind].length)
+      expect(p.paint).toBeLessThan(LIVERIES[p.kind].length)
       expect(Math.abs(p.yaw)).toBeLessThanOrEqual(Math.PI + 1e-9)
       expect(Number.isFinite(p.x + p.z + p.yaw)).toBe(true)
     }
+    // Only a nganya or a safari van wears a pattern.
+    for (const kind of ['car', 'boda'] as const) {
+      expect(LIVERIES[kind].every((livery) => livery.pattern === LIVERY.plain)).toBe(true)
+    }
+    expect(LIVERIES.nganya.every((livery) => livery.pattern !== LIVERY.plain)).toBe(true)
     // A mix of colours, not a fleet of one.
     expect(new Set(plan.filter((p) => p.kind === 'car').map((p) => p.paint)).size).toBeGreaterThan(
       5,

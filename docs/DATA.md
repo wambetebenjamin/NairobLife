@@ -69,15 +69,30 @@ Besides the buildings, streets and parks you can see, the baked data decides:
    identical boxes. A guessed building is never more than 1.25 times as tall as its
    footprint is wide. Estimated buildings are flagged `est` in the zone file.
 
-In the CBD, 244 of 3,065 buildings have a real height. They are mostly the towers, so the
-skyline is trustworthy and the side streets are a reasonable guess.
+In the original CBD snapshot, 244 of 3,065 mapped building pieces have a height from
+OSM. The rest are estimates. Added landmark pieces and adjusted heights are approximate,
+not surveys; the skyline can still differ significantly from the real city.
 
 ### Landmark overrides
 
-`scripts/osm/landmarks.ts` holds hand-written fixes, keyed by OpenStreetMap id, for
-buildings whose shape tags cannot express. There is one today: KICC, whose mapped outline
-is really the saucer at the top of the tower. Keep the list short. If the map is wrong,
-the right fix is to correct OpenStreetMap, which helps everyone, and fetch again.
+`scripts/osm/landmarks.ts` holds hand-written fixes for shapes or appearances our generic
+rules cannot express. It adjusts KICC and its amphitheatre, Times Tower, Parliament and
+Bunge Tower, and adds approximate crown and clock-tower pieces. The 2022 skyline footage
+in the supplied Drive folder, particularly `12659642` and `12659644`, informed these
+choices. The video is used as a visual reference only; no video frames are shipped. Camera
+position, dimensions and colours are approximate. The footage predates some newer buildings,
+so we do not remove buildings absent from it. Keep the list short: if the underlying map
+is wrong, the right fix is to correct OpenStreetMap and fetch again.
+
+For vehicles, the supplied Shutterstock search page was reviewed as a catalogue of Nairobi
+matatu and bus designs alongside other public reference imagery. The game uses original
+procedural models and patterns, not stock photographs or copies of specific vehicle art.
+Licensed Shutterstock originals were not available through the connected apps and are not
+included in the repository.
+
+The Drive folder also contains roads and other locations; not every clip was identified as
+being in the playable CBD. `12784974_3840_2160_25fps.mp4` exceeded the connector's 100 MiB
+transfer limit and was not reviewed. `new.mp4` is a byte-identical copy of `12659642`.
 
 ## What the current map gets wrong
 

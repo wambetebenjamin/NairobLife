@@ -5,7 +5,7 @@
  * stations and streets are, and these rules fill them in:
  *
  *  - **Matatus** queue at the kerb beside every stage, with the stage's route or SACCO
- *    as their name.
+ *    as their name. Some of the queue are 14-seaters and some are nganyas.
  *  - **Boda bodas** wait in a row on the pavement at the stages and the filling stations,
  *    the way riders really do.
  *  - **Cars** stand in the car parks in rows, and along the kerbs of the quieter streets.
@@ -23,6 +23,8 @@ import {
   CAR_PAINT,
   FLEET_LIMITS,
   MATATU_PAINT,
+  NGANYA_LIVERIES,
+  NGANYA_NAMES,
   VEHICLES,
   type VehicleKind,
 } from '../config/vehicles'
@@ -49,9 +51,11 @@ export interface Placement {
   z: number
   /** Heading: 0 faces north, positive turns left. */
   yaw: number
-  /** Index into the kind's paint list in config/vehicles.ts. */
+  /** Index into the kind's list of liveries (LIVERIES in config/vehicles.ts). */
   paint: number
-  /** Matatus: the route or SACCO of the stage they wait at, straight from the map. */
+  /** Nganyas: what this one is called. */
+  name?: string
+  /** Matatus and nganyas: the route or SACCO of the stage they wait at, straight from the map. */
   label?: string
 }
 
@@ -103,6 +107,15 @@ const BAY_RUN = 5
 /** Paint for the car and matatu left at the start: easy to spot against the square. */
 const STARTER_CAR = '#c9302c'
 const STARTER_MATATU = '#1f4e9c'
+/** The nganya left at the start: red with yellow flames, and called Moto, fire. */
+const STARTER_NGANYA = 0
+
+/** Share of the matatus waiting at a stage that are nganyas rather than 14-seaters. */
+const NGANYA_SHARE = 0.42
+/** One 14-seater in this many is a safari van in zebra stripes. */
+const SAFARI_ODDS = 0.06
+/** The safari van's place in the matatu's liveries: straight after the everyday paints. */
+const SAFARI_PAINT = MATATU_PAINT.length
 
 /** Share of the car budget that goes to kerbside parking; the rest fills car parks. */
 const KERBSIDE_SHARE = 0.42
@@ -114,10 +127,12 @@ const KERB_PARKING: Partial<Record<RoadKind, number>> = {
   secondary: 0.22,
 }
 
-const PAINT: Record<VehicleKind, readonly string[]> = {
-  car: CAR_PAINT,
-  boda: BODA_PAINT,
-  matatu: MATATU_PAINT,
+/** How many everyday liveries each kind picks from at random. Specials are chosen by rule. */
+const CHOICES: Record<VehicleKind, number> = {
+  car: CAR_PAINT.length,
+  boda: BODA_PAINT.length,
+  matatu: MATATU_PAINT.length,
+  nganya: NGANYA_LIVERIES.length,
 }
 
 /** Heading that faces along a direction on the ground. */
@@ -153,7 +168,7 @@ class Planner {
   readonly placements: Placement[] = []
   private readonly taken = new SpatialGrid<OrientedRect>(12)
   private readonly trunks = new SpatialGrid<[number, number, number]>(20)
-  private readonly counts: Record<VehicleKind, number> = { car: 0, boda: 0, matatu: 0 }
+  private readonly counts: Record<VehicleKind, number> = { car: 0, boda: 0, matatu: 0, nganya: 0 }
   private readonly limits: Rect
   private readonly streets = new Map<ZoneRoad, Street>()
   private readonly index: ZoneIndex
@@ -255,7 +270,12 @@ class Planner {
       x: round2(spot.x),
       z: round2(spot.z),
       yaw: round4(yawOf(spot.dx, spot.dz)),
-      paint: paint ?? Math.floor(hash01(seed, 91) * PAINT[kind].length),
+      paint: paint ?? Math.floor(hash01(seed, 91) * CHOICES[kind]),
+    }
+    if (kind === 'nganya') {
+      // The one at the start keeps the name that goes with its flames.
+      const pick = paint === STARTER_NGANYA && seed < 8 ? 0 : hash01(seed, 92)
+      placement.name = NGANYA_NAMES[Math.floor(pick * NGANYA_NAMES.length)]
     }
     if (label) placement.label = label
     this.placements.push(placement)
@@ -373,6 +393,7 @@ export function planFleet(
   const car = VEHICLES.car
   const boda = VEHICLES.boda
   const matatu = VEHICLES.matatu
+  const nganya = VEHICLES.nganya
   const kerbOffset = (road: ZoneRoad, width: number) => road.w / 2 - width / 2 - KERB_GAP
 
   /** A row of bodas on the pavement, noses to the street. */
@@ -452,6 +473,7 @@ export function planFleet(
         paint: MATATU_PAINT.indexOf(STARTER_MATATU),
         label: 'City Square',
       },
+      { kind: 'nganya', spot: ahead(22, -12.5), paint: STARTER_NGANYA, label: 'City Square' },
     ]
     const near = plan.streetsNear(x, z, START_REACH, 5.5)[0]
     starters.forEach(({ kind, spot, paint, label }, i) => {
@@ -459,7 +481,7 @@ export function planFleet(
       // No room there: queue at the kerb of the nearest street instead.
       const { street, along, side } = near
       const step = street.road.ow || side === 1 ? 1 : -1
-      kerbPark(kind, street, along - step * i * (matatu.length + QUEUE_GAP), side, i, label, paint)
+      kerbPark(kind, street, along - step * i * (nganya.length + QUEUE_GAP), side, i, label, paint)
     })
   }
 
@@ -470,7 +492,13 @@ export function planFleet(
     const z = poi.z / q
     const label = poi.r ?? poi.n
     const queue = 1 + Math.floor(hash01(i, 11) * 2.7)
-    const pitch = matatu.length + QUEUE_GAP
+    // Who is in the queue, front first: 14-seaters and nganyas, each with its own length.
+    const waiting = Array.from({ length: queue }, (_, k) => {
+      const seed = i * 7 + k
+      const kind: VehicleKind = hash01(seed, 14) < NGANYA_SHARE ? 'nganya' : 'matatu'
+      const paint = kind === 'matatu' && hash01(seed, 15) < SAFARI_ODDS ? SAFARI_PAINT : undefined
+      return { kind, seed, paint }
+    })
     // The street beside the marker is often a short stub between two junctions with no
     // legal kerb at all, so work outwards: nearest street first, the marker's own side
     // of it first, and stop at the first place a matatu fits.
@@ -479,9 +507,13 @@ export function planFleet(
       for (const side of [nearSide, -nearSide] as (1 | -1)[]) {
         const step = street.road.ow || side === 1 ? 1 : -1
         let parked = 0
-        for (let k = 0; k < queue; k++) {
-          if (kerbPark('matatu', street, along - step * k * pitch, side, i * 7 + k, label)) parked++
-        }
+        // Distance back from the head of the queue to the middle of the next vehicle.
+        let back = 0
+        waiting.forEach(({ kind, seed, paint }, k) => {
+          const length = VEHICLES[kind].length
+          if (k > 0) back += VEHICLES[waiting[k - 1].kind].length / 2 + QUEUE_GAP + length / 2
+          if (kerbPark(kind, street, along - step * back, side, seed, label, paint)) parked++
+        })
         if (parked) {
           rank = { street, along, side, step }
           break
@@ -503,7 +535,7 @@ export function planFleet(
     const { street, along, side, step } = rank
     // Riders wait just ahead of the front matatu.
     const riders = 2 + Math.floor(hash01(i, 13) * 3)
-    bodaRank(street, along + step * (matatu.length / 2 + 1.6), side, riders, i)
+    bodaRank(street, along + step * (VEHICLES[waiting[0].kind].length / 2 + 1.6), side, riders, i)
   })
 
   // ------------------------------------------------------------------ filling stations

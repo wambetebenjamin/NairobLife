@@ -55,6 +55,8 @@ export interface Toast {
 /** A vehicle as the HUD needs to know it: what it is and, for a matatu, where it runs. */
 export interface VehicleTag {
   kind: VehicleKind
+  /** Nganyas: what this one is called. */
+  name?: string
   label?: string
 }
 
