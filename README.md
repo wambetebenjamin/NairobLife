@@ -146,6 +146,9 @@ It is a static site: `npm run build` and host the `dist/` folder anywhere.
 No environment variables are needed. [`.env.example`](.env.example) lists the ones later
 phases will use.
 
+Automatic checks on pull requests are written but not switched on yet:
+[`docs/ci/github-actions-ci.yml`](docs/ci/github-actions-ci.yml) says how to enable them.
+
 ## Credits
 
 - Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright),
