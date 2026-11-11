@@ -1,8 +1,40 @@
 /**
  * Materials for the ground plane and the decals painted on it.
  */
-import { MeshLambertMaterial, Vector4 } from 'three'
+import { MeshLambertMaterial, ShaderChunk, Vector4 } from 'three'
 import { GROUND } from '../geometry/palette'
+
+/** The line in three.js's lighting code where a spot light's contribution is worked out. */
+export const SPOT_LIGHT_LINE = 'getSpotLightInfo( spotLight, geometryPosition, directLight );'
+
+/**
+ * Makes a ground material throw headlights back at the driver.
+ *
+ * A headlamp sits knee-high, so its light skims the road at a degree or two. A perfectly
+ * matte surface lit that way stays black: to light the tarmac thirty metres off you
+ * would need a lamp that burns every wall in front of it white. Real roads are not
+ * matte, they are rough, and a rough surface lit from low down looks about as bright as
+ * one lit square-on. So for spot lights only (the headlights are the only ones), the
+ * ground forgets the angle the light arrives at.
+ *
+ * This rewrites one line of three.js's own shader. If a later three.js words that line
+ * differently, the ground falls back to ordinary lighting, and a test says so.
+ */
+export function catchHeadlights(fragmentShader: string): string {
+  const lighting = ShaderChunk.lights_fragment_begin
+  if (!lighting.includes(SPOT_LIGHT_LINE)) return fragmentShader
+  return fragmentShader.replace(
+    '#include <lights_fragment_begin>',
+    lighting.replace(
+      SPOT_LIGHT_LINE,
+      `${SPOT_LIGHT_LINE}
+		directLight.color /= max( dot( geometryNormal, directLight.direction ), 0.01 );`,
+    ),
+  )
+}
+
+/** Shader cache key for the plain ground materials that only add `catchHeadlights`. */
+const HEADLIT_KEY = 'kanairo-headlit-ground-v1'
 
 /**
  * The ground plane. Inside the zone it is worn paving and dust, breaking into Nairobi's
@@ -28,13 +60,13 @@ export function createEarthMaterial(
         '#include <begin_vertex>',
         '#include <begin_vertex>\nvGroundPos = (modelMatrix * vec4(transformed, 1.0)).xz;',
       )
-    shader.fragmentShader = shader.fragmentShader
+    shader.fragmentShader = catchHeadlights(shader.fragmentShader)
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
 varying vec2 vGroundPos;
 uniform vec4 uZone;
-float nlNoise(vec2 p) {
+float knNoise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
   f = f * f * (3.0 - 2.0 * f);
@@ -52,16 +84,16 @@ float nlNoise(vec2 p) {
 {
   // Metres per pixel: fine grain is dropped where a pixel is too big to show it.
   float footprint = max(fwidth(vGroundPos.x), fwidth(vGroundPos.y));
-  float broad = nlNoise(vGroundPos * 0.011) * 0.65 + nlNoise(vGroundPos * 0.043) * 0.35;
-  float fine = mix(nlNoise(vGroundPos * 0.9), 0.5, smoothstep(0.25, 1.1, footprint));
+  float broad = knNoise(vGroundPos * 0.011) * 0.65 + knNoise(vGroundPos * 0.043) * 0.35;
+  float fine = mix(knNoise(vGroundPos * 0.9), 0.5, smoothstep(0.25, 1.1, footprint));
 
   // ---- inside the zone: paving and dust, with patches of red murram
   vec3 murram = vec3(0.3, 0.135, 0.07);
   vec3 town = mix(diffuseColor.rgb, murram, smoothstep(0.56, 0.86, broad) * 0.42);
 
   // ---- beyond it: bush, dry grass and bare earth in big soft patches
-  float region = nlNoise(vGroundPos * 0.0037 + 31.7);
-  float patches = nlNoise(vGroundPos * 0.019 + 7.3);
+  float region = knNoise(vGroundPos * 0.0037 + 31.7);
+  float patches = knNoise(vGroundPos * 0.019 + 7.3);
   vec3 bush = vec3(0.075, 0.13, 0.05);
   vec3 grass = vec3(0.2, 0.21, 0.09);
   vec3 soil = vec3(0.27, 0.16, 0.09);
@@ -76,7 +108,7 @@ float nlNoise(vec2 p) {
 }`,
       )
   }
-  material.customProgramCacheKey = () => 'nairoblife-earth-v2'
+  material.customProgramCacheKey = () => 'kanairo-earth-v3'
   return material
 }
 
@@ -86,21 +118,32 @@ float nlNoise(vec2 p) {
  * mesh lists them. The polygon offset wins the depth test against the ground beneath.
  */
 export function createDecalMaterial(): MeshLambertMaterial {
-  return new MeshLambertMaterial({
+  const material = new MeshLambertMaterial({
     vertexColors: true,
     depthWrite: false,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -8,
   })
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = catchHeadlights(shader.fragmentShader)
+  }
+  material.customProgramCacheKey = () => HEADLIT_KEY
+  return material
 }
 
 /** Flyover decks, ramps and piers. The small offset stops ramp feet flickering against the ground. */
 export function createStructureMaterial(): MeshLambertMaterial {
-  return new MeshLambertMaterial({
+  const material = new MeshLambertMaterial({
     vertexColors: true,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -2,
   })
+  // The decks are roads too.
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = catchHeadlights(shader.fragmentShader)
+  }
+  material.customProgramCacheKey = () => HEADLIT_KEY
+  return material
 }

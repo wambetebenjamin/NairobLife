@@ -108,6 +108,9 @@ export const GROUND = {
   paving: hexToLinear('#bcb09a'),
   steps: hexToLinear('#9a958c'),
   marking: hexToLinear('#e9e6da'),
+  /** Kerb stones, and the black blocks painted on every other one along the main streets. */
+  kerb: hexToLinear('#d3cdc1'),
+  kerbPaint: hexToLinear('#2c2c2e'),
   rail: hexToLinear('#5b4f47'),
   ballast: hexToLinear('#8a8177'),
   concrete: hexToLinear('#9d9a94'),
