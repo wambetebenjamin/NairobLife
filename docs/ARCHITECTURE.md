@@ -236,7 +236,7 @@ Search the code for `TODO(` followed by a topic:
 | ------------------- | --------------------------------------------------- | ------------------------------------------------------ |
 | `TODO(traffic)`     | `World.tsx`, `vehicles/fleet.ts`                    | A road graph, and drivers other than the player        |
 | `TODO(matatus)`     | `World.tsx`, `TeleportMenu.tsx`, `vehicleModels.ts` | Routes between stages; text on livery and route boards |
-| `TODO(pedestrians)` | `World.tsx`                                         | Crowds on pavements                                    |
+| Pedestrians         | `world/pedestrians/`                                | Ambient walkers; interaction remains future work       |
 | `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs; lane lines on the flyover decks          |
 | `TODO(multiplayer)` | `vehicles/fleet.ts`, `MainMenu.tsx`                 | What a server would send for the vehicles              |
 | `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback  |

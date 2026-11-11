@@ -761,6 +761,11 @@ kbd {
   font-size: 15px;
 }
 
+.clock__label {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .clock__icon {
   display: inline-flex;
   color: var(--accent);
@@ -880,6 +885,14 @@ kbd {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.cluster__real-time {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(14, 15, 18, 0.6);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A dark plate behind the small print: it has to stay readable over sunlit paving. */

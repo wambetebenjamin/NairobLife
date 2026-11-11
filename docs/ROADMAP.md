@@ -46,6 +46,8 @@ Phases 3 onwards are plans, not promises: nothing in them is built yet.
 
 ## Phase 3: a living city
 
+- [x] Ambient walking pedestrians on clear pavements and City Square (visual only)
+
 - [ ] Road graph built from the baked streets (one-way flags and lane counts are stored)
 - [ ] Traffic that follows it: cars, matatus that stop at stages, bodas that do not
 - [ ] Pedestrians on the pavements, thickest around stages and markets

@@ -32,13 +32,16 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 - **16 teleports** to landmarks, including the KICC helipad.
 - **A day that passes**: 24 real minutes per game day, with dusk, lit windows at night, and
   a haze setting for the dry season.
+- **Ambient pedestrians** walk on pavements and around City Square. They are visual-only
+  and do not interact or collide yet.
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
-  real latitude and longitude, and a speedometer.
+  real latitude and longitude, a speedometer, and the current real-world Nairobi time.
+  The separate game clock controls the day/night cycle.
 - **Keyboard and mouse, or touch.** Third-person and first-person cameras, on foot and at
   the wheel.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
-What is _not_ here yet: traffic, pedestrians, sound, multiplayer. They are planned, in
+What is _not_ here yet: traffic, interactive pedestrians, sound, multiplayer. They are planned, in
 that order. See the [roadmap](docs/ROADMAP.md).
 
 ## Run it

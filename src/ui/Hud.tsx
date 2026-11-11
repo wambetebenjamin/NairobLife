@@ -37,6 +37,7 @@ import {
 } from './icons'
 import { getMapImage } from './mapImage'
 import { Minimap } from './Minimap'
+import { nairobiTime } from './nairobiTime'
 import { useT } from './useT'
 
 const projection = createProjection(WORLD_ORIGIN)
@@ -46,6 +47,7 @@ interface Sample {
   street: string
   place: string
   clock: string
+  realTime: string
   night: boolean
   speed: number
   bearing: number
@@ -77,6 +79,7 @@ export function Hud() {
         street: zone.index.streetAt(p.x, p.z) ?? '',
         place: zone.index.placeAt(p.x, p.z) ?? zone.file.name,
         clock: formatClock(runtime.time),
+        realTime: nairobiTime(new Date()),
         night: sunAngle(runtime.time) > Math.PI,
         speed: Math.round(p.speed * 3.6),
         bearing,
@@ -101,11 +104,15 @@ export function Hud() {
       </div>
 
       <div className="toolbar">
-        <div className="clock" title="Time of day. [ and ] move the sun.">
+        <div
+          className="clock"
+          title="Game time. [ and ] move the sun. Real Nairobi time is shown below."
+        >
           <ClockStep hours={-1} label="Earlier">
             <ChevronLeftIcon />
           </ClockStep>
           <span className="clock__icon">{sample.night ? <MoonIcon /> : <SunIcon />}</span>
+          <span className="clock__label">Game</span>
           <span className="clock__time">{sample.clock}</span>
           <ClockStep hours={1} label="Later">
             <ChevronRightIcon />
@@ -154,6 +161,9 @@ export function Hud() {
         <div className="cluster__speed">
           <strong>{sample.speed}</strong>
           <span>{t('speed')}</span>
+        </div>
+        <div className="cluster__real-time" title="Current real-world time in Nairobi">
+          Nairobi <strong>{sample.realTime} EAT</strong>
         </div>
         <dl className="cluster__facts">
           <div>

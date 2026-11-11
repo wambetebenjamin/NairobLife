@@ -29,6 +29,7 @@ import { Vehicles } from './vehicles/Vehicles'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
+import { Pedestrians } from './world/pedestrians/Pedestrians'
 import type { LoadedZone } from './world/zone/loadZone'
 
 /** Upper limit on device pixel ratio: the single biggest lever on GPU cost. */
@@ -76,6 +77,7 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
         >
           <StepClock />
           <World zone={zone} />
+          <Pedestrians zone={zone} start={start} />
           <Vehicles zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />
