@@ -104,7 +104,7 @@ export interface ZonePlace {
   a: number
 }
 
-export type PoiKind = 'stage' | 'signal' | 'lamp' | 'fuel' | 'sight' | 'fountain'
+export type PoiKind = 'stage' | 'signal' | 'lamp' | 'fuel' | 'sight' | 'fountain' | 'crossing'
 
 export interface ZonePoi {
   k: PoiKind
@@ -148,7 +148,7 @@ export interface ZoneFile {
 
 export const OSM_ATTRIBUTION = '© OpenStreetMap contributors (ODbL)'
 
-/** Roads a car can drive on (Phase 2 traffic uses these). */
+/** Roads a car can drive on: where vehicles are parked now, and where traffic will run. */
 export const DRIVABLE: Record<RoadKind, boolean> = {
   motorway: true,
   trunk: true,

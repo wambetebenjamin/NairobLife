@@ -377,7 +377,7 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
   const { nodeHeight, decks } = computeElevations(elevWays)
 
   // Junction nodes must survive simplification so roads keep meeting exactly
-  // (Phase 2 rebuilds the road graph from shared end points).
+  // (traffic, in Phase 3, rebuilds the road graph from shared end points).
   const nodeUse = new Map<number, number>()
   for (const { way } of rawRoads) {
     for (const id of new Set(way.nodes)) nodeUse.set(id, (nodeUse.get(id) ?? 0) + 1)

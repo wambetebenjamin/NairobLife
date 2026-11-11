@@ -175,6 +175,8 @@ export function poiKind(tags: Tags): PoiKind | undefined {
     return 'stage'
   }
   if (tags.highway === 'traffic_signals') return 'signal'
+  // A marked place to cross the road. The game paints a zebra crossing there.
+  if (tags.highway === 'crossing') return 'crossing'
   if (tags.highway === 'street_lamp') return 'lamp'
   if (tags.amenity === 'fuel') return 'fuel'
   if (tags.amenity === 'fountain') return 'fountain'
