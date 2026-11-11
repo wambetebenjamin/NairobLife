@@ -1,6 +1,7 @@
 /**
  * The in-game HUD: toolbar (top right), street name over the radar (bottom left), speed
- * and position (bottom right), key hints (bottom centre).
+ * and position (bottom right), key hints (bottom centre), and a prompt above them when
+ * there is a vehicle within reach.
  *
  * The numbers come from state/runtime.ts, which changes every frame. Rather than
  * re-render React 60 times a second, the HUD samples it four times a second.
@@ -21,7 +22,7 @@ import {
   toggleCamera,
   toggleFullscreen,
 } from '../game/actions'
-import { useGame } from '../state/gameStore'
+import { useGame, type VehicleTag } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { formatClock, sunAngle } from '../world/environment/skyModel'
@@ -62,6 +63,8 @@ export function Hud() {
   const touch = useGame((state) => state.touch)
   const pointerLocked = useGame((state) => state.pointerLocked)
   const teleportOpen = useGame((state) => state.teleportOpen)
+  const driving = useGame((state) => state.driving)
+  const nearVehicle = useGame((state) => state.nearVehicle)
   const map = useMemo(() => (zone ? getMapImage(zone.file) : null), [zone])
 
   const [sample, setSample] = useState<Sample | null>(null)
@@ -131,7 +134,21 @@ export function Hud() {
         <Minimap map={map} size={touch ? 124 : 176} />
       </div>
 
-      <div className="cluster">
+      {/* On touch screens the same offer is a button under the thumb (TouchControls). */}
+      {nearVehicle && !driving && !touch && (
+        <div className="hud__prompt">
+          <kbd>F</kbd>
+          <span>{t(nearVehicle.kind === 'boda' ? 'ride' : 'drive')}</span>
+          <VehicleName vehicle={nearVehicle} />
+        </div>
+      )}
+
+      <div className={`cluster${driving ? ' cluster--driving' : ''}`}>
+        {driving && (
+          <div className="cluster__vehicle">
+            <VehicleName vehicle={driving} />
+          </div>
+        )}
         <div className="cluster__speed">
           <strong>{sample.speed}</strong>
           <span>{t('speed')}</span>
@@ -160,10 +177,21 @@ export function Hud() {
 
       {showControls && !touch && (
         <div className="hud__hints">
-          <ControlsCard compact />
+          <ControlsCard compact driving={!!driving} />
         </div>
       )}
     </div>
+  )
+}
+
+/** "Matatu · Githurai 45": what the vehicle is and, if the map says, where it runs. */
+function VehicleName({ vehicle }: { vehicle: VehicleTag }) {
+  const t = useT()
+  return (
+    <span className="vehicle-name">
+      <strong>{t(vehicle.kind)}</strong>
+      {vehicle.label && <em>{vehicle.label}</em>}
+    </span>
   )
 }
 

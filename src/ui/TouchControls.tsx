@@ -1,6 +1,9 @@
 /**
  * On-screen controls for phones and tablets: a thumb stick that appears wherever the
- * left thumb lands, drag-to-look everywhere else, and three buttons.
+ * left thumb lands, drag-to-look everywhere else, and a few buttons.
+ *
+ * At the wheel the same stick is pedals and steering, the big button is the handbrake,
+ * and a "get out" button replaces the two that only make sense on foot.
  *
  * Everything here ends up in the same input object the keyboard writes to, so the game
  * itself never knows which device is in use.
@@ -9,7 +12,9 @@
  */
 import { useRef, useState } from 'react'
 import { CAMERA } from '../config/game'
+import { enterOrExitVehicle } from '../game/actions'
 import { input } from '../input/input'
+import { useGame } from '../state/gameStore'
 import { useT } from './useT'
 
 /** How far the thumb travels for full speed, in CSS pixels. */
@@ -22,6 +27,17 @@ export function TouchControls() {
   const [knob, setKnob] = useState<{ x: number; y: number; dx: number; dy: number } | null>(null)
   const [running, setRunning] = useState(false)
   const [crouched, setCrouched] = useState(false)
+  const driving = useGame((state) => state.driving)
+  const nearVehicle = useGame((state) => state.nearVehicle)
+
+  /** Into the nearest vehicle or out of this one; and let go of anything held on foot. */
+  const enterOrExit = () => {
+    input.setTouchButton('crouch', false)
+    input.setTouchButton('sprint', false)
+    setCrouched(false)
+    setRunning(false)
+    enterOrExitVehicle()
+  }
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -96,26 +112,41 @@ export function TouchControls() {
       {!knob && <div className="stick stick--idle" />}
 
       <div className="touch__buttons" onPointerDown={(event) => event.stopPropagation()}>
-        <button
-          className={`pad${crouched ? ' is-on' : ''}`}
-          onClick={() => {
-            input.setTouchButton('crouch', !crouched)
-            setCrouched(!crouched)
-          }}
-        >
-          {t('crouch')}
-        </button>
-        <button
-          className={`pad${running ? ' is-on' : ''}`}
-          onClick={() => {
-            input.setTouchButton('sprint', !running)
-            setRunning(!running)
-          }}
-        >
-          {t('sprint')}
-        </button>
+        {driving ? (
+          <button className="pad pad--wide pad--offer" onClick={enterOrExit}>
+            {t(driving.kind === 'boda' ? 'getOff' : 'getOut')}
+          </button>
+        ) : (
+          <>
+            {nearVehicle && (
+              <button className="pad pad--wide pad--offer" onClick={enterOrExit}>
+                {t(nearVehicle.kind === 'boda' ? 'ride' : 'drive')}
+                <small>{nearVehicle.label ?? t(nearVehicle.kind)}</small>
+              </button>
+            )}
+            <button
+              className={`pad${crouched ? ' is-on' : ''}`}
+              onClick={() => {
+                input.setTouchButton('crouch', !crouched)
+                setCrouched(!crouched)
+              }}
+            >
+              {t('crouch')}
+            </button>
+            <button
+              className={`pad${running ? ' is-on' : ''}`}
+              onClick={() => {
+                input.setTouchButton('sprint', !running)
+                setRunning(!running)
+              }}
+            >
+              {t('sprint')}
+            </button>
+          </>
+        )}
+        {/* Jump on foot; the same input is the handbrake at the wheel. */}
         <button className="pad pad--big" {...hold('jump')}>
-          {t('jump')}
+          {t(driving ? 'handbrake' : 'jump')}
         </button>
       </div>
     </div>

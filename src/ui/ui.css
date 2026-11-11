@@ -896,6 +896,58 @@ kbd {
   font-size: 10.5px;
 }
 
+/* At the wheel the speed is the thing to read: bigger, and named. */
+.cluster--driving .cluster__speed strong {
+  font-size: 64px;
+}
+
+.cluster__vehicle {
+  font-size: 13px;
+}
+
+.vehicle-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.vehicle-name strong {
+  font-weight: 700;
+}
+
+.vehicle-name em {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* "F  Drive  Matatu  Githurai 45": offered when a vehicle is within reach. */
+.hud__prompt {
+  bottom: calc(var(--pad) + var(--safe-bottom) + 64px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: toast-in 0.18s ease-out;
+}
+
+.hud__prompt kbd {
+  min-width: 2em;
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+
 /* Sits between the radar and the speed cluster; hidden where there is no room for it. */
 .hud__hints {
   bottom: calc(var(--pad) + var(--safe-bottom));
@@ -970,6 +1022,35 @@ kbd {
   font-size: 14px;
 }
 
+/* "Drive" and "Get out": a full-width pill above the round buttons. */
+.pad--wide {
+  grid-column: 1 / -1;
+  display: grid;
+  place-content: center;
+  width: auto;
+  min-width: 142px;
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.pad--wide small {
+  max-width: 150px;
+  overflow: hidden;
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pad--offer {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 .pad.is-on,
 .pad:active {
   border-color: transparent;
@@ -997,6 +1078,10 @@ kbd {
 
 .ui--touch .cluster__speed strong {
   font-size: 30px;
+}
+
+.ui--touch .cluster--driving .cluster__speed strong {
+  font-size: 42px;
 }
 
 /* ------------------------------------------------------------------ small screens */
