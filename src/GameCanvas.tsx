@@ -3,32 +3,41 @@
  *
  * Frame order matters and is set with useFrame priorities (lower runs first):
  *   -50  physics steps and places bodies        (<Physics updatePriority>)
+ *   -45  how far between two steps this frame is (world/physics/StepClock.tsx)
+ *   -30  vehicles are drawn where they now are  (vehicles/Vehicles.tsx)
  *   -20  player reads its new position          (player/Player.tsx)
- *   -10  camera follows the player              (player/CameraRig.tsx)
- *     0  everything else (sky, lights, HUD taps)
+ *   -10  camera follows the player or vehicle   (player/CameraRig.tsx)
+ *     0  everything else (sky, lights, the character's pose)
  * Keeping every priority at zero or below leaves React Three Fiber in charge of the
  * final render call.
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { NeutralToneMapping } from 'three'
-import { CAMERA, PLAYER } from './config/game'
+import { CAMERA, PLAYER, START_LANDMARK } from './config/game'
+import { getLandmark } from './config/landmarks'
 import { translate } from './config/strings'
 import { attachGame } from './game/actions'
-import { exposeThree } from './game/debug'
 import { CameraRig } from './player/CameraRig'
 import { Player } from './player/Player'
+import { resolveLandmark } from './player/teleport'
+import { expose } from './state/debugHandle'
 import { useGame, useQuality, type Quality } from './state/gameStore'
-import { runtime } from './state/runtime'
+import { runtime, type TeleportRequest } from './state/runtime'
+import { Vehicles } from './vehicles/Vehicles'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
+import { StepClock } from './world/physics/StepClock'
 import type { LoadedZone } from './world/zone/loadZone'
 
 /** Upper limit on device pixel ratio: the single biggest lever on GPU cost. */
 const MAX_DPR: Record<Exclude<Quality, 'auto'>, number> = { high: 1.75, medium: 1.25, low: 1 }
 
 const PHYSICS_STEP = 1 / 60
+
+/** Where a new game starts if the start landmark is ever missing: just south of KICC. */
+const FALLBACK_START: TeleportRequest = { x: 0, z: 60, yaw: 0, onTop: false }
 
 /** Auto quality: two measuring windows in a row below this frame rate lower the graphics. */
 const SLOW_FPS = 30
@@ -39,6 +48,11 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
   const paused = useGame((state) => state.phase === 'paused')
   // Antialiasing can only be chosen when the WebGL context is created.
   const antialias = useRef(quality !== 'low').current
+  // Where a new game starts: the player appears here, with a vehicle of each kind in view.
+  const start = useMemo(() => {
+    const landmark = getLandmark(START_LANDMARK)
+    return landmark ? resolveLandmark(landmark, zone) : FALLBACK_START
+  }, [zone])
 
   return (
     <Canvas
@@ -60,8 +74,10 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           paused={paused}
           gravity={[0, -PLAYER.gravity, 0]}
         >
+          <StepClock />
           <World zone={zone} />
-          <Player zone={zone} />
+          <Vehicles zone={zone} start={start} />
+          <Player start={start} />
           <CameraRig />
           <ReadySignal />
         </Physics>
@@ -76,7 +92,7 @@ function Bindings() {
   const canvas = useThree((state) => state.gl.domElement)
   const get = useThree((state) => state.get)
   useEffect(() => attachGame(canvas), [canvas])
-  useEffect(() => exposeThree(get()), [get])
+  useEffect(() => expose('three', get()), [get])
   return null
 }
 

@@ -8,10 +8,15 @@
  * Slow, UI-facing state (which screen is showing, settings) lives in gameStore.ts.
  */
 import { CAMERA, TIME } from '../config/game'
+import type { VehicleKind } from '../config/vehicles'
 
 export const runtime = {
+  /**
+   * The player, wherever they are. On foot this is the character; at the wheel it is the
+   * vehicle, so the map, the street name, the shadows and the zone edge need not care.
+   */
   player: {
-    /** Feet position in world metres (interpolated for rendering). */
+    /** Feet (or the road under the vehicle) in world metres, interpolated for rendering. */
     x: 0,
     y: 0,
     z: 0,
@@ -35,6 +40,38 @@ export const runtime = {
     distance: CAMERA.distance as number,
   },
 
+  /** Id of the vehicle being driven, or -1 on foot. Change it with vehicles/driving.ts. */
+  driving: -1,
+
+  /**
+   * The driven vehicle as it is drawn this frame. Filled in by the fleet while driving;
+   * stale, and to be ignored, on foot.
+   */
+  vehicle: {
+    kind: 'car' as VehicleKind,
+    /** The road under the middle of the vehicle. */
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    /** Nose up is positive. Follows the road, without the dive of braking. */
+    pitch: 0,
+    /** Lean of the bodywork (and, on two wheels, of everything). Right side up is positive. */
+    roll: 0,
+    /** Speed along the heading in m/s; negative in reverse. */
+    speed: 0,
+    /** How hard the last knock was, as a closing speed in m/s, and how long ago. */
+    impact: 0,
+    impactAgo: 10,
+    airborne: false,
+  },
+
+  /** F was pressed: get into the nearest vehicle, or out of this one. Consumed by the fleet. */
+  enterExit: false,
+
+  /** How dark it is, 0 (day) .. 1 (night). Vehicles switch their lamps on by it. */
+  night: 0,
+
   /** How far the third-person camera really is from the player right now, in metres. */
   cameraGap: CAMERA.distance as number,
 
@@ -56,4 +93,9 @@ export interface TeleportRequest {
   onTop: boolean
   /** Camera elevation on arrival, in radians; negative looks up. Defaults to a level view. */
   pitch?: number
+  /**
+   * Stand at exactly this height instead of looking for the ground, and leave the camera
+   * where it is. Used when stepping out of a vehicle, which may be up on a flyover.
+   */
+  y?: number
 }

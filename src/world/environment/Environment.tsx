@@ -73,6 +73,7 @@ export function Environment() {
       runtime.time = (runtime.time + Math.min(delta, 0.1) * HOURS_PER_SECOND + 24) % 24
     }
     computeSky(runtime.time, game.settings.haze, sky)
+    runtime.night = sky.night
 
     fog.color.setRGB(sky.horizon[0], sky.horizon[1], sky.horizon[2])
     fog.density = sky.fogDensity

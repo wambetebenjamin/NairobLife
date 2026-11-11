@@ -9,8 +9,9 @@
  *
  * Rendering reads runtime.player, which this component fills in every frame.
  *
- * TODO(vehicles): Phase 2 adds an "on foot / driving" switch here: press F near a
- * vehicle, hide this capsule, hand the camera to the vehicle.
+ * At the wheel (runtime.driving, see vehicles/driving.ts) none of that runs. The capsule
+ * is carried along inside the vehicle, touching nothing, so that getting out is one step
+ * to the side; the fleet fills in runtime.player instead.
  */
 import type { KinematicCharacterController } from '@dimforge/rapier3d-compat'
 import { useFrame } from '@react-three/fiber'
@@ -25,16 +26,14 @@ import {
 } from '@react-three/rapier'
 import { useEffect, useMemo, useRef } from 'react'
 import { Vector3, type Group } from 'three'
-import { CAMERA, PLAYER, START_LANDMARK } from '../config/game'
-import { getLandmark } from '../config/landmarks'
+import { CAMERA, PLAYER } from '../config/game'
 import { clamp, dampAngle } from '../core/math'
 import { input } from '../input/input'
 import { useGame } from '../state/gameStore'
 import { runtime, type TeleportRequest } from '../state/runtime'
+import { endDriving } from '../vehicles/driving'
 import { NOT_PLAYER_GROUPS, PLAYER_GROUPS } from '../world/physics/groups'
-import type { LoadedZone } from '../world/zone/loadZone'
 import { PlayerModel } from './PlayerModel'
-import { resolveLandmark } from './teleport'
 
 /** Gap the controller keeps between the capsule and the world, in metres. */
 const SKIN = 0.02
@@ -48,19 +47,13 @@ const NO_ROTATION = { x: 0, y: 0, z: 0, w: 1 }
 
 const halfHeightFor = (height: number) => height / 2 - PLAYER.radius
 
-export function Player({ zone }: { zone: LoadedZone }) {
+/** @param start where a new game begins; the body is created there */
+export function Player({ start }: { start: TeleportRequest }) {
   const { rapier, world } = useRapier()
   const body = useRef<RapierRigidBody>(null)
   const collider = useRef<RapierCollider>(null)
   const visual = useRef<Group>(null)
   const controller = useRef<KinematicCharacterController | null>(null)
-
-  // Where a new game starts. Computed once so the body is created in the right place.
-  const start = useMemo(() => {
-    const landmark = getLandmark(START_LANDMARK)
-    const fallback: TeleportRequest = { x: 0, z: 60, yaw: 0, onTop: false }
-    return landmark ? resolveLandmark(landmark, zone) : fallback
-  }, [zone])
 
   /** Simulation state that only the physics step touches. */
   const sim = useRef({
@@ -121,17 +114,37 @@ export function Player({ zone }: { zone: LoadedZone }) {
     const request = runtime.teleport
     if (request && sim.steps > 0) {
       runtime.teleport = null
-      const from = request.onTop ? 600 : 2.5
-      const ray = new rapier.Ray({ x: request.x, y: from, z: request.z }, DOWN)
-      const hit = physics.castRay(ray, from + 20, true, undefined, NOT_PLAYER_GROUPS)
-      const y = hit ? Math.max(0, from - hit.timeOfImpact) : 0
-      b.setTranslation({ x: request.x, y: y + 0.05, z: request.z }, true)
+      // Arriving somewhere on foot means leaving any vehicle where it stands.
+      endDriving()
+      let y = request.y
+      if (y === undefined) {
+        const from = request.onTop ? 600 : 2.5
+        const ray = new rapier.Ray({ x: request.x, y: from, z: request.z }, DOWN)
+        const hit = physics.castRay(ray, from + 20, true, undefined, NOT_PLAYER_GROUPS)
+        y = (hit ? Math.max(0, from - hit.timeOfImpact) : 0) + 0.05
+        runtime.camera.yaw = request.yaw
+        // From a rooftop, look down over the city; otherwise look where the landmark says.
+        runtime.camera.pitch = request.pitch ?? (request.onTop ? 0.3 : CAMERA.startPitch)
+      }
+      b.setTranslation({ x: request.x, y, z: request.z }, true)
       sim.vx = sim.vy = sim.vz = 0
-      sim.safe = { x: request.x, y: y + 0.05, z: request.z }
+      sim.safe = { x: request.x, y, z: request.z }
       p.yaw = request.yaw
-      runtime.camera.yaw = request.yaw
-      // From a rooftop, look down over the city; otherwise look where the landmark says.
-      runtime.camera.pitch = request.pitch ?? (request.onTop ? 0.3 : CAMERA.startPitch)
+      return
+    }
+
+    // ------------------------------------------------------------- at the wheel
+    if (runtime.driving >= 0) {
+      if (sim.crouching) {
+        sim.crouching = false
+        col.setHalfHeight(halfHeightFor(PLAYER.height))
+        col.setTranslationWrtParent({ x: 0, y: PLAYER.height / 2, z: 0 })
+      }
+      // Ride along. Nothing the vehicle or the camera looks for can see this capsule
+      // (see physics/groups.ts), so it is free to sit inside the bodywork.
+      b.setNextKinematicTranslation({ x: p.x, y: p.y, z: p.z })
+      sim.vx = sim.vy = sim.vz = 0
+      sim.safe = { x: p.x, y: p.y, z: p.z }
       return
     }
 
@@ -267,6 +280,9 @@ export function Player({ zone }: { zone: LoadedZone }) {
   // Runs after the physics has placed the body for this frame (see GameCanvas).
   const position = useMemo(() => new Vector3(), [])
   useFrame((_, delta) => {
+    // At the wheel the fleet reports where the player is. And with a teleport waiting,
+    // the capsule is about to be somewhere else: do not report where it was.
+    if (runtime.driving >= 0 || runtime.teleport) return
     const p = runtime.player
     if (visual.current) {
       visual.current.getWorldPosition(position)
@@ -287,22 +303,25 @@ export function Player({ zone }: { zone: LoadedZone }) {
   }, -20)
 
   return (
-    <RigidBody
-      ref={body}
-      type="kinematicPosition"
-      colliders={false}
-      position={[start.x, 0.05, start.z]}
-      enabledRotations={[false, false, false]}
-    >
-      <CapsuleCollider
-        ref={collider}
-        args={[halfHeightFor(PLAYER.height), PLAYER.radius]}
-        position={[0, PLAYER.height / 2, 0]}
-        collisionGroups={PLAYER_GROUPS}
-      />
-      <group ref={visual}>
-        <PlayerModel />
-      </group>
-    </RigidBody>
+    <>
+      <RigidBody
+        ref={body}
+        type="kinematicPosition"
+        colliders={false}
+        position={[start.x, 0.05, start.z]}
+        enabledRotations={[false, false, false]}
+      >
+        <CapsuleCollider
+          ref={collider}
+          args={[halfHeightFor(PLAYER.height), PLAYER.radius]}
+          position={[0, PLAYER.height / 2, 0]}
+          collisionGroups={PLAYER_GROUPS}
+        />
+        {/* Marks the feet. The physics moves it smoothly between steps; we read it back above. */}
+        <group ref={visual} />
+      </RigidBody>
+      {/* The figure stands wherever runtime.player says, which may be on a boda's seat. */}
+      <PlayerModel />
+    </>
   )
 }

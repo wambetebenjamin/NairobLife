@@ -19,8 +19,8 @@ export type TapAction =
   | 'timeBack'
   | 'timeForward'
   | 'fullscreen'
-  // Reserved for Phase 2 so muscle memory carries over.
   | 'enterVehicle'
+  // Reserved for a later phase so muscle memory carries over.
   | 'reconPulse'
 
 export const HELD_KEYS: Record<string, HeldAction> = {
@@ -52,12 +52,20 @@ export const TAP_KEYS: Record<string, TapAction> = {
   KeyQ: 'reconPulse',
 }
 
-/** What the controls card shows. `soon` rows are greyed out until their phase ships. */
-export const CONTROLS_HELP: readonly { keys: string[]; label: string; soon?: boolean }[] = [
+export interface ControlsRow {
+  keys: string[]
+  label: string
+  /** Greyed out until its phase ships. */
+  soon?: boolean
+}
+
+/** What the controls card shows on foot. The first rows are the ones the HUD keeps on screen. */
+export const CONTROLS_HELP: readonly ControlsRow[] = [
   { keys: ['W', 'A', 'S', 'D'], label: 'Move' },
   { keys: ['Mouse'], label: 'Look' },
   { keys: ['Shift'], label: 'Sprint' },
   { keys: ['Space'], label: 'Jump' },
+  { keys: ['F'], label: 'Drive / get out' },
   { keys: ['C'], label: 'Crouch' },
   { keys: ['T'], label: 'Teleport / map' },
   { keys: ['V'], label: 'Camera' },
@@ -66,5 +74,15 @@ export const CONTROLS_HELP: readonly { keys: string[]; label: string; soon?: boo
   { keys: ['G'], label: 'Graphics' },
   { keys: ['H'], label: 'Hide HUD' },
   { keys: ['Esc'], label: 'Pause' },
-  { keys: ['F'], label: 'Enter vehicle', soon: true },
+]
+
+/** The same keys at the wheel: what the HUD shows instead while driving. */
+export const DRIVING_HELP: readonly ControlsRow[] = [
+  { keys: ['W', 'S'], label: 'Drive / brake' },
+  { keys: ['A', 'D'], label: 'Steer' },
+  { keys: ['Space'], label: 'Handbrake' },
+  { keys: ['F'], label: 'Get out' },
+  { keys: ['Mouse'], label: 'Look around' },
+  { keys: ['V'], label: 'Camera' },
+  { keys: ['T'], label: 'Teleport / map' },
 ]

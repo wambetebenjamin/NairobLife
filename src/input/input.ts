@@ -4,6 +4,9 @@
  * The simulation never looks at DOM events. It reads this object once per physics step:
  * move axes, a few held buttons, and look deltas that accumulate until consumed. That
  * keeps gameplay code identical for every input device.
+ *
+ * The same keys mean different things on foot and at the wheel (Space jumps, or pulls
+ * the handbrake). This file does not know which; whoever reads it does.
  */
 import { HELD_KEYS, TAP_KEYS, type HeldAction, type TapAction } from '../config/controls'
 
@@ -33,6 +36,28 @@ export const input = {
       y /= len
     }
     return { x, y }
+  },
+
+  /**
+   * The same two axes for driving: steering (-1 left .. 1 right) and pedals (-1 brake
+   * and reverse .. 1 full power). Unlike `move`, each runs its full range whatever the
+   * other is doing: flat out and full lock at once is what holding W and D means.
+   */
+  drive(): { steer: number; throttle: number } {
+    if (!enabled) return PARKED
+    let x = touch.x
+    let y = touch.y
+    // A thumb stick moves in a circle; stretch it to a square so the diagonals reach
+    // full throttle and full lock together, as two keys do.
+    const longest = Math.max(Math.abs(x), Math.abs(y))
+    if (longest > 1e-3) {
+      const stretch = Math.hypot(x, y) / longest
+      x *= stretch
+      y *= stretch
+    }
+    x += (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0)
+    y += (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0)
+    return { steer: Math.max(-1, Math.min(1, x)), throttle: Math.max(-1, Math.min(1, y)) }
   },
 
   sprint: () => enabled && (held.has('sprint') || touch.sprint),
@@ -105,6 +130,7 @@ export const input = {
 }
 
 const ZERO = { x: 0, y: 0 }
+const PARKED = { steer: 0, throttle: 0 }
 
 function isTyping(target: EventTarget | null): boolean {
   return (

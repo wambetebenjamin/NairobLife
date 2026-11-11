@@ -2,7 +2,7 @@
  * The main menu, drawn over the live city (the camera circles KICC behind it).
  */
 import { useMemo } from 'react'
-import { GAME_NAME, REPO_URL } from '../config/game'
+import { GAME_WORDMARK, REPO_URL } from '../config/game'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { startGame } from '../game/actions'
 import { useGame } from '../state/gameStore'
@@ -13,7 +13,7 @@ export function MainMenu() {
   const t = useT()
   const openSettings = useGame((state) => state.setSettingsOpen)
   const zone = useGame((state) => state.zone)
-  const [head, tail] = [GAME_NAME.slice(0, -4), GAME_NAME.slice(-4)]
+  const [head, tail] = GAME_WORDMARK
   const stats = useMemo(() => {
     if (!zone) return ''
     const streets = new Set(zone.file.roads.map((road) => road.n).filter(Boolean)).size
@@ -39,8 +39,7 @@ export function MainMenu() {
             <span className="mode__name">{t('play')}</span>
             <span className="mode__hint">{t('playHint')}</span>
           </button>
-          {/* TODO(vehicles): Phase 2. TODO(multiplayer): Phase 5. TODO(battle-royale): Phase 6. */}
-          <ComingSoon name={t('garage')} hint={t('garageHint')} phase="Phase 2" />
+          {/* TODO(multiplayer): Phase 5. TODO(battle-royale): Phase 6. */}
           <ComingSoon name={t('multiplayer')} hint={t('multiplayerHint')} phase="Phase 5" />
           <ComingSoon name={t('battleRoyale')} hint={t('battleRoyaleHint')} phase="Phase 6" />
         </nav>
@@ -55,7 +54,7 @@ export function MainMenu() {
         </div>
 
         <footer className="menu__footer">
-          <p>Phase 1 · Nairobi CBD · {stats}</p>
+          <p>Phase 2 · Nairobi CBD · {stats}</p>
           <p>
             Map data{' '}
             <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">

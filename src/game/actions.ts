@@ -144,6 +144,14 @@ export function resetTime(): void {
   runtime.time = TIME.startHour
 }
 
+/**
+ * Get into the nearest vehicle, or out of the one being driven. The fleet decides which
+ * on its next physics step (vehicles/driving.ts); this only passes on the request.
+ */
+export function enterOrExitVehicle(): void {
+  if (game().phase === 'playing') runtime.enterExit = true
+}
+
 export function toggleFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen()
   else void document.documentElement.requestFullscreen?.().catch(() => {})
@@ -175,8 +183,7 @@ function onTap(action: TapAction): void {
     case 'fullscreen':
       return toggleFullscreen()
     case 'enterVehicle':
-      // TODO(vehicles): Phase 2. Find the nearest vehicle within reach and get in.
-      return game().toast('Vehicles arrive in Phase 2: matatus, nduthis and cars.')
+      return enterOrExitVehicle()
     case 'reconPulse':
       // TODO(gameplay): reserved for a scan/ping ability in later modes.
       return

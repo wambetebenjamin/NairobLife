@@ -5,6 +5,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Language } from '../config/strings'
+import type { VehicleKind } from '../config/vehicles'
 import type { LoadedZone } from '../world/zone/loadZone'
 
 /**
@@ -51,6 +52,12 @@ export interface Toast {
   text: string
 }
 
+/** A vehicle as the HUD needs to know it: what it is and, for a matatu, where it runs. */
+export interface VehicleTag {
+  kind: VehicleKind
+  label?: string
+}
+
 interface GameState {
   phase: Phase
   zone: LoadedZone | null
@@ -65,6 +72,10 @@ interface GameState {
   settingsOpen: boolean
   /** A black overlay that hides camera cuts (teleports, starting a game). */
   curtain: boolean
+  /** The vehicle the player is driving, if any. (Which one, and where, is in runtime.ts.) */
+  driving: VehicleTag | null
+  /** A vehicle close enough to get into, for the "press F" prompt. */
+  nearVehicle: VehicleTag | null
   /** Load progress, 0..1, and what is being loaded, for the loading screen. */
   progress: { value: number; label: string }
   toasts: Toast[]
@@ -83,6 +94,8 @@ interface GameState {
   setTeleportOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
   setCurtain: (on: boolean) => void
+  setDriving: (vehicle: VehicleTag | null) => void
+  setNearVehicle: (vehicle: VehicleTag | null) => void
   setProgress: (value: number, label: string) => void
   updateSettings: (patch: Partial<Settings>) => void
   setAutoQuality: (quality: Exclude<Quality, 'auto'>) => void
@@ -113,6 +126,8 @@ export const useGame = create<GameState>()(
       teleportOpen: false,
       settingsOpen: false,
       curtain: false,
+      driving: null,
+      nearVehicle: null,
       progress: { value: 0, label: '' },
       toasts: [],
       autoQuality: guessQuality(),
@@ -135,6 +150,8 @@ export const useGame = create<GameState>()(
       setTeleportOpen: (teleportOpen) => set({ teleportOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setCurtain: (curtain) => set({ curtain }),
+      setDriving: (driving) => set({ driving, nearVehicle: null }),
+      setNearVehicle: (nearVehicle) => set({ nearVehicle }),
       setProgress: (value, label) => set({ progress: { value, label } }),
       updateSettings: (patch) => set((state) => ({ settings: { ...state.settings, ...patch } })),
       setAutoQuality: (autoQuality) => set({ autoQuality }),
