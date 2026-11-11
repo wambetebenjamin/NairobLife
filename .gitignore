@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# local env (never commit secrets; see .env.example)
+.env
+.env.*
+!.env.example
+
+# tooling
+.vercel/
+.eslintcache
+coverage/
+*.log
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# raw OSM downloads are cached uncompressed here; only the .gz seed is committed
+data/osm/*.osm.json
+
+# debug map drawn by `npm run osm:preview`
+data/zones/*.preview.svg
