@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0e0f12"/>
+  <!-- KICC: shaft, crown, helipad -->
+  <rect x="26" y="20" width="12" height="36" fill="#ffd21f"/>
+  <rect x="19" y="13" width="26" height="8" rx="2" fill="#ffd21f"/>
+  <rect x="24" y="9" width="16" height="4" rx="1" fill="#ffd21f"/>
+  <rect x="8" y="56" width="48" height="3" fill="#1f9d55"/>
+</svg>

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <title>NairobLife · Free-roam Nairobi in your browser</title>
+    <meta
+      name="description"
+      content="An open-world Nairobi you can walk around in your browser. Real streets and buildings from OpenStreetMap. No download."
+    />
+    <meta name="theme-color" content="#0e0f12" />
+    <meta property="og:title" content="NairobLife" />
+    <meta
+      property="og:description"
+      content="Free-roam Nairobi in your browser. Real streets, no download."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link
+      rel="preload"
+      href="/fonts/bungee-latin-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <!--
+      The loading screen is plain HTML and CSS right here, so it appears the instant the
+      page arrives, before any JavaScript has downloaded. src/ui/bootScreen.ts then drives
+      the progress bar and removes the screen once the city is on screen.
+    -->
+    <style>
+      @font-face {
+        font-family: 'Bungee';
+        src: url('/fonts/bungee-latin-400.woff2') format('woff2');
+        font-display: swap;
+      }
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: #0e0f12;
+        color: #f4f1ea;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        overflow: hidden;
+        overscroll-behavior: none;
+        -webkit-font-smoothing: antialiased;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(1200px 600px at 50% 110%, rgba(255, 210, 31, 0.13), transparent 60%),
+          linear-gradient(180deg, #14161b, #0b0c0f);
+        transition: opacity 0.5s ease;
+      }
+      .boot--done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot__inner {
+        width: min(460px, 100%);
+        text-align: center;
+      }
+      .boot__flag {
+        display: flex;
+        height: 6px;
+        width: 96px;
+        margin: 0 auto 22px;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .boot__flag i {
+        flex: 1;
+      }
+      .boot__title {
+        margin: 0;
+        font:
+          400 clamp(40px, 11vw, 68px) / 0.95 'Bungee',
+          'Arial Black',
+          sans-serif;
+        letter-spacing: 0.01em;
+      }
+      .boot__title span {
+        color: #ffd21f;
+      }
+      .boot__tag {
+        margin: 12px 0 34px;
+        color: #b9b4a8;
+        font-size: 15px;
+      }
+      .boot__bar {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+      .boot__bar i {
+        display: block;
+        height: 100%;
+        width: 4%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #ffd21f, #ffb300);
+        transition: width 0.25s ease;
+      }
+      .boot__status {
+        margin: 12px 0 0;
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #d9d4c8;
+      }
+      .boot__tip {
+        min-height: 3em;
+        margin: 26px 0 0;
+        color: #9c978c;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .boot__retry {
+        margin-top: 18px;
+        padding: 10px 22px;
+        border: 0;
+        border-radius: 8px;
+        background: #ffd21f;
+        color: #0e0f12;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .boot--error .boot__bar i {
+        background: #c8102e;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boot" class="boot" role="status" aria-live="polite">
+      <div class="boot__inner">
+        <div class="boot__flag" aria-hidden="true">
+          <i style="background: #111"></i><i style="background: #c8102e"></i
+          ><i style="background: #1f9d55"></i>
+        </div>
+        <h1 class="boot__title">NAIROB<span>LIFE</span></h1>
+        <p class="boot__tag">Free-roam Nairobi. No download.</p>
+        <div class="boot__bar"><i id="boot-bar"></i></div>
+        <p class="boot__status" id="boot-status">Loading</p>
+        <p class="boot__tip" id="boot-tip"></p>
+        <noscript><p>NairobLife needs JavaScript to run.</p></noscript>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
