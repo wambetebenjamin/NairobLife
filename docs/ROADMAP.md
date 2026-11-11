@@ -1,12 +1,12 @@
 # Roadmap
 
-Where NairobLife is, and the order things are planned in. Each phase should end with
+Where Kanairo is, and the order things are planned in. Each phase should end with
 something playable. The feature list is modelled on [CodedLife](reference/README.md);
 the content is Nairobi's own.
 
-Phases 2 onwards are plans, not promises: nothing in them is built yet.
+Phases 3 onwards are plans, not promises: nothing in them is built yet.
 
-## Phase 1: the city on foot (this version)
+## Phase 1: the city on foot (done)
 
 - [x] Map pipeline: OpenStreetMap to a compact zone file, with tests
 - [x] The CBD in 3D: buildings with real footprints, streets, parks, flyovers, trees
@@ -24,16 +24,23 @@ Phases 2 onwards are plans, not promises: nothing in them is built yet.
 - [ ] Sound: footsteps, city ambience
 - [ ] Gamepad support
 
-## Phase 2: vehicles
+## Phase 2: vehicles (this version)
 
-The first thing to build next. Rapier already provides a ray-cast vehicle controller.
-
-- [ ] Drivable car: enter and exit with `F`, chase camera, handbrake
-- [ ] Boda boda (nduthi): leaning, faster off the line
-- [ ] Matatu: slow, heavy, loud paint; parked at the stages already in the map data
-- [ ] Vehicles spawn at stages, car parks and fuel stations
-- [ ] Speedometer for vehicles, flip-upright prompt
-- [ ] Road surface detail: kerbs, lane lines on one-way roads, zebra crossings, bumps
+- [x] Drivable car: enter and exit with `F`, chase camera, handbrake
+- [x] Boda boda (nduthi): leans into corners, turns tighter than anything else
+- [x] Matatu: slow, heavy, with the yellow line; parked at the stages in the map data and
+      carrying their names
+- [x] 328 vehicles parked at stages, in car parks, at fuel stations and along the kerbs
+- [x] Speedometer and vehicle name in the HUD; touch controls for driving
+- [x] Headlights, tail lamps and brake lights on the vehicle you are driving
+- [x] Road paint: kerb lines, lane lines, zebra crossings and stop lines
+- [ ] Speed bumps. The map data has none for the CBD, so they need a fresh download
+      or mapping on OpenStreetMap first
+- [ ] Raised pavements with kerbs a wheel has to climb; lane lines on the flyover decks
+- [ ] Engine, tyre and horn sounds
+- [ ] Damage, and vehicles that can roll over (they cannot yet, so there is nothing to
+      flip upright)
+- [ ] Matatu liveries: graffiti art and route boards
 - [ ] Load Rapier's WASM as its own file (saves download size)
 
 ## Phase 3: a living city

@@ -1,8 +1,8 @@
 /**
  * Materials for the fleet.
  *
- * All vehicles of a kind are drawn in one call, so anything that differs from one to the
- * next has to travel with the instance rather than the material:
+ * All vehicles of a kind are drawn together, as instances of one mesh, so anything that
+ * differs from one to the next has to travel with the instance rather than the material:
  *
  *  - **Paint.** Each instance has a colour. The stock shader would tint the whole model
  *    with it, tyres and windows included, so the patch below applies it only to faces

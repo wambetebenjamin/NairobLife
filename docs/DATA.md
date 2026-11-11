@@ -40,13 +40,25 @@ Reads the raw extract and writes a compact zone file. In order, it:
    out which stretches are raised (bridges) and how the ramps reach the ground.
 4. **Ground cover**: parks, gardens, woods, water, car parks, squares.
 5. **Places and points**: named areas for the "where am I" label, mapped trees, matatu
-   stages, fuel stations, fountains.
+   stages, fuel stations, fountains, pedestrian crossings.
 6. **Writes** integers in decimetres with short keys, and prints a summary.
 
 Run it with `--verbose` to see every building-part decision.
 
-The format is defined, with comments, in `src/world/zone/format.ts`. Change it only
-together with `ZONE_FORMAT_VERSION`.
+The format is defined, with comments, in `src/world/zone/format.ts`. A change that an
+older build could not read needs a new `ZONE_FORMAT_VERSION`. Adding a kind of point, as
+Phase 2 did for crossings, does not: builds that do not know the kind ignore it.
+
+### What the game does with it
+
+Besides the buildings, streets and parks you can see, the baked data decides:
+
+- **Where vehicles are parked** (`src/vehicles/placement.ts`): matatus and boda bodas at
+  each stage, cars in the mapped car parks, a few cars and bodas at each fuel station, and
+  cars along the kerbs of streets wide enough to park on.
+- **Road paint** (`src/world/geometry/ground.ts`): lane lines from the `lanes` tag where a
+  road has one and from its width where it does not, a solid centre line on roads with two
+  or more lanes each way, and a zebra crossing with stop lines at each mapped crossing.
 
 ### How heights are decided
 
@@ -81,6 +93,16 @@ sources and the exact commits. The consequences:
 | The southern and eastern edges have fewer details | Only the less detailed source covers them | Yes                     |
 | The data is as old as those repositories          | They are snapshots                        | Yes                     |
 
+Thin spots that matter more now there are roads to drive:
+
+- **17 pedestrian crossings** are mapped in the whole CBD. The real number is far higher.
+- **Lane counts** are tagged on 66 of the 1,550 drivable road pieces. The rest are
+  guessed from the road's width.
+- **No speed bumps** are mapped at all, so the game has none.
+- **25 matatu stages** are mapped, 20 of them with a name.
+
+A fresh fetch may improve these. Mapping them on OpenStreetMap certainly will.
+
 Limits that a fresh fetch will **not** fix:
 
 - **Most heights are estimates** (see above). Adding `building:levels` to buildings on
@@ -107,11 +129,13 @@ is a roadmap item; the shared projection origin means they will already line up.
 
 ## Changing how the map looks
 
-| To change                              | Edit                                            | Re-bake? |
-| -------------------------------------- | ----------------------------------------------- | -------- |
-| Wall, roof, road and park colours      | `src/world/geometry/palette.ts`                 | No       |
-| Windows, shop fronts, night lighting   | `src/world/materials/buildingMaterial.ts`       | No       |
-| Which buildings get which facade style | `styleFor` in `src/world/geometry/buildings.ts` | No       |
-| Road widths, what counts as a park     | `scripts/osm/lib/tags.ts`                       | Yes      |
-| Height estimates                       | `scripts/osm/lib/heights.ts`                    | Yes      |
-| Tree density                           | `src/world/geometry/trees.ts`                   | No       |
+| To change                               | Edit                                                  | Re-bake? |
+| --------------------------------------- | ----------------------------------------------------- | -------- |
+| Wall, roof, road and park colours       | `src/world/geometry/palette.ts`                       | No       |
+| Windows, shop fronts, night lighting    | `src/world/materials/buildingMaterial.ts`             | No       |
+| Which buildings get which facade style  | `styleFor` in `src/world/geometry/buildings.ts`       | No       |
+| Kerb lines, lane lines, zebra stripes   | `src/world/geometry/ground.ts`                        | No       |
+| Where vehicles are parked, and how many | `src/vehicles/placement.ts`, `src/config/vehicles.ts` | No       |
+| Road widths, what counts as a park      | `scripts/osm/lib/tags.ts`                             | Yes      |
+| Height estimates                        | `scripts/osm/lib/heights.ts`                          | Yes      |
+| Tree density                            | `src/world/geometry/trees.ts`                         | No       |

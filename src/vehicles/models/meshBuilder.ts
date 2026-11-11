@@ -4,8 +4,8 @@
  * takes the vehicle's own colour) or as a lamp (it can be lit).
  *
  * Like the character, the vehicles have no model files. A car is forty lines of
- * measurements you can read and change, it costs nothing to download, and every copy of
- * it is drawn in one call.
+ * measurements you can read and change, it costs nothing to download, and all its
+ * copies are drawn together.
  *
  * Model space: x is the vehicle's right, y is up, and the nose points along -z, the same
  * way the character faces. The origin is on the ground under the middle of the vehicle.
