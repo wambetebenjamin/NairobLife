@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { loadBakedZone } from '../../testing/zoneFixture'
-import { buildRoadGraph, makeTraffic, stepTraffic, trafficPose, type TrafficAgent } from './graph'
+import {
+  buildRoadGraph,
+  makeTraffic,
+  sameEdgeClearance,
+  stepTraffic,
+  trafficPose,
+  type TrafficAgent,
+} from './graph'
 
 const fixture = loadBakedZone()
 const zone = {
@@ -76,5 +83,14 @@ describe('ambient traffic graph', () => {
     expect(car.edge).toBe(1)
     expect(car.progress).toBe(0)
     expect(car.wait).toBe(3)
+  })
+  it('keeps a same-edge following gap but ignores opposing or behind vehicles', () => {
+    const follower = agent('matatu')
+    const ahead = { ...agent(), progress: 22 }
+    const behind = { ...agent(), progress: 1, edge: 1 }
+    expect(sameEdgeClearance(follower, [follower, ahead, behind])).toBe(12)
+    stepTraffic(follower, graph, sameEdgeClearance(follower, [follower, ahead]) / follower.speed)
+    expect(follower.progress).toBe(12)
+    expect(sameEdgeClearance(follower, [follower, ahead])).toBe(0)
   })
 })

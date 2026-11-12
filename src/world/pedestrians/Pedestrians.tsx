@@ -33,14 +33,21 @@ const RANGES = { high: 180, medium: 140, low: 100 }
 export function Pedestrians({
   zone,
   start,
+  exclusion,
 }: {
   zone: LoadedZone
   start: { x: number; z: number; yaw?: number }
+  exclusion?: { x: number; z: number } | null
 }) {
   const quality = useQuality()
   const paths = useMemo(
-    () => planPedestrians(zone.file, zone.index, zone.geometry.trees, start),
-    [zone, start],
+    () =>
+      planPedestrians(zone.file, zone.index, zone.geometry.trees, start).filter(
+        (p) =>
+          !exclusion ||
+          Math.hypot((p.ax + p.bx) / 2 - exclusion.x, (p.az + p.bz) / 2 - exclusion.z) > 14,
+      ),
+    [zone, start, exclusion],
   )
   const refs = useRef<(InstancedMesh | null)[]>([])
   const assets = useMemo(

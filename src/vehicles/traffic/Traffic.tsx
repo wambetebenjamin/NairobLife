@@ -17,7 +17,7 @@ import { runtime } from '../../state/runtime'
 import type { LoadedZone } from '../../world/zone/loadZone'
 import { buildVehicleModel, buildWheelGeometry } from '../models/vehicleModels'
 import { createVehicleMaterial, createWheelMaterial } from '../view/vehicleMaterials'
-import { buildRoadGraph, makeTraffic, stepTraffic, trafficPose } from './graph'
+import { buildRoadGraph, makeTraffic, sameEdgeClearance, stepTraffic, trafficPose } from './graph'
 
 const KINDS = ['car', 'matatu', 'boda'] as const
 const RANGE = { low: 120, medium: 180, high: 240 }
@@ -100,7 +100,15 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
         dz = player.z - pose.z
       // Slow/stop near the player; ambient traffic has no collision or player boarding yet.
       const blocked = Math.hypot(dx, dz) < 7
-      if (playing) stepTraffic(agent, scene.graph, Math.min(delta, 0.05), blocked)
+      if (playing) {
+        const dt = Math.min(delta, 0.05)
+        const clearance = sameEdgeClearance(agent, scene.agents)
+        // Keep a gap to a vehicle ahead on this segment. Crossings and other segments
+        // are not collision-aware yet.
+        const limited = Math.min(dt, clearance / agent.speed)
+        if (limited > 0) stepTraffic(agent, scene.graph, limited, blocked)
+        else if (agent.wait > 0) stepTraffic(agent, scene.graph, dt, true)
+      }
       edge = scene.graph.edges[agent.edge]
       pose = trafficPose(edge, agent.progress)
       if (

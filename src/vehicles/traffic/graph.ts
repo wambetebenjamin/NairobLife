@@ -173,3 +173,15 @@ export function stepTraffic(
     agent.stopped = false
   }
 }
+
+/** Available metres before the vehicle ahead on the same directed segment, keeping a gap.
+ * This is a visual headway aid, not collision detection at junctions or across segments. */
+export function sameEdgeClearance(agent: TrafficAgent, agents: readonly TrafficAgent[]): number {
+  let available = Infinity
+  const gap = agent.kind === 'matatu' ? 10 : 7
+  for (const other of agents) {
+    if (other === agent || other.edge !== agent.edge || other.progress <= agent.progress) continue
+    available = Math.min(available, Math.max(0, other.progress - agent.progress - gap))
+  }
+  return available
+}

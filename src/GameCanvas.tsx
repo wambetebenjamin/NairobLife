@@ -27,6 +27,10 @@ import { useGame, useQuality, type Quality } from './state/gameStore'
 import { runtime, type TeleportRequest } from './state/runtime'
 import { Vehicles } from './vehicles/Vehicles'
 import { Traffic } from './vehicles/traffic/Traffic'
+import { planFleet } from './vehicles/placement'
+import { BOUNDARY_INSET } from './world/Boundary'
+import { Campaign } from './world/campaign/Campaign'
+import { planCampaign } from './world/campaign/placement'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
@@ -57,6 +61,22 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
     const landmark = getLandmark(START_LANDMARK)
     return landmark ? resolveLandmark(landmark, zone) : FALLBACK_START
   }, [zone])
+  const placements = useMemo(
+    () =>
+      planFleet(zone.file, zone.index, {
+        start,
+        trees: zone.geometry.trees,
+        edgeInset: BOUNDARY_INSET,
+      }),
+    [zone, start],
+  )
+  const campaign = useMemo(
+    () =>
+      zone.id === 'nairobi-cbd'
+        ? planCampaign(zone.index, zone.geometry.trees, placements, start)
+        : null,
+    [zone, start, placements],
+  )
 
   return (
     <Canvas
@@ -82,8 +102,9 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           <World zone={zone} />
           <Billboards zone={zone} start={start} />
           <StreetFurniture zone={zone} />
-          <Pedestrians zone={zone} start={start} />
-          <Vehicles zone={zone} start={start} />
+          <Pedestrians zone={zone} start={start} exclusion={campaign} />
+          <Vehicles placements={placements} />
+          {campaign && <Campaign site={campaign} />}
           <Traffic zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />

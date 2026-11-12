@@ -11,7 +11,7 @@
  */
 import { useFrame } from '@react-three/fiber'
 import { useBeforePhysicsStep, useRapier } from '@react-three/rapier'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Group } from 'three'
 import { DRIVING } from '../config/vehicles'
 import { clamp } from '../core/math'
@@ -19,12 +19,10 @@ import { input } from '../input/input'
 import { expose } from '../state/debugHandle'
 import { useGame, useQuality, type Quality } from '../state/gameStore'
 import { runtime } from '../state/runtime'
-import { BOUNDARY_INSET } from '../world/Boundary'
 import { stepFraction } from '../world/physics/stepFraction'
-import type { LoadedZone } from '../world/zone/loadZone'
 import { endDriving, pressEnterExit } from './driving'
 import { Fleet, type Pose } from './fleet'
-import { planFleet, type StartSpot } from './placement'
+import type { Placement } from './placement'
 import type { DriveInput } from './sim/vehicleSim'
 import { FleetView, type DrawRanges } from './view/fleetView'
 
@@ -44,22 +42,12 @@ const PROMPT_EVERY = 0.12
 const MIN_KNOCK = 1.5
 const MIN_LANDING = 5
 
-/** @param start where a new game begins; one vehicle of each kind is parked just ahead of it */
-export function Vehicles({ zone, start }: { zone: LoadedZone; start?: StartSpot }) {
+/** Render and simulate the planned parked fleet. */
+export function Vehicles({ placements }: { placements: Placement[] }) {
   const { rapier, world } = useRapier()
   const quality = useQuality()
   const root = useRef<Group>(null)
   const live = useRef<{ fleet: Fleet; view: FleetView } | null>(null)
-
-  const placements = useMemo(
-    () =>
-      planFleet(zone.file, zone.index, {
-        start,
-        trees: zone.geometry.trees,
-        edgeInset: BOUNDARY_INSET,
-      }),
-    [zone, start],
-  )
 
   useEffect(() => {
     const parent = root.current

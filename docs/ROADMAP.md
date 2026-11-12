@@ -4,7 +4,7 @@ Where kaNAIRO is, and the order things are planned in. Each phase should end wit
 something playable. The feature list is modelled on [CodedLife](reference/README.md);
 the content is Nairobi's own.
 
-Phases 3 onwards are plans, not promises: nothing in them is built yet.
+Phase 3 is in progress. Later phases are plans, not promises.
 
 ## Phase 1: the city on foot (done)
 
@@ -51,9 +51,12 @@ Phases 3 onwards are plans, not promises: nothing in them is built yet.
 - [x] A ground-level directed graph from baked streets, retaining one-way and lane data
 - [x] Prototype ambient cars, matatus and bodas following the graph; matatus pause near
       mapped stages. Traffic is non-colliding, can overlap, respawns at dead ends, and
-      does not obey signals or carry passengers yet. Elevated roads are excluded.
+      keeps a gap to traffic ahead on the same segment, but does not obey signals or
+      carry passengers yet. Junction priority is not simulated and elevated roads are excluded.
 - [x] Decorative mapped street lamps, traffic lights and stage signs (signals are static)
 - [x] In-world "ADVERTISE HERE" placeholders; no ad booking or contact system
+- [x] A fictional, non-partisan campaign rally near City Square, with an animated speaker
+      and crowd (a silent, non-interactive scene, not a real election event)
 - [ ] More natural pedestrian movement and denser crowds near markets and stages
 - [ ] Matatu routes you can ride, as fast travel with a view
 - [ ] Interactive traffic rules and collision-aware vehicles
