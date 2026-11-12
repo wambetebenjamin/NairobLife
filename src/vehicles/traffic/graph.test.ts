@@ -60,6 +60,17 @@ describe('ambient traffic graph', () => {
     expect(car.progress).toBe(10)
     expect(car.turns).toBe(1)
   })
+  it('adds up to three marked patrol motorcycles to the regular traffic simulation', () => {
+    const real = buildRoadGraph(fixture)
+    const agents = makeTraffic(real, { x: 0, z: 0 })
+    const patrol = agents.filter((a) => a.patrol)
+    expect(patrol).toHaveLength(3)
+    expect(patrol.every((a) => a.kind === 'boda')).toBe(true)
+    const before = patrol[0].progress
+    stepTraffic(patrol[0], real, 0.1)
+    expect(patrol[0].progress).toBeGreaterThan(before)
+    expect(makeTraffic(real, { x: 0, z: 0 }, 2).filter((a) => a.patrol)).toHaveLength(0)
+  })
   it('stops matatus at stages, waits, and resumes; bodas do not stop', () => {
     const matatu = agent('matatu')
     stepTraffic(matatu, graph, 2)

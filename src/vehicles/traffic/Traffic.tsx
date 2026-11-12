@@ -5,6 +5,11 @@ import type { Collider } from '@dimforge/rapier3d-compat'
 import { useEffect, useMemo, useRef } from 'react'
 import {
   BufferGeometry,
+  BoxGeometry,
+  CanvasTexture,
+  MeshLambertMaterial,
+  MeshBasicMaterial,
+  PlaneGeometry,
   Color,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -65,16 +70,93 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
       mesh.frustumCulled = false
       return { model, geo, mesh }
     })
+    const signCanvas = document.createElement('canvas')
+    signCanvas.width = 128
+    signCanvas.height = 48
+    const ctx = signCanvas.getContext('2d')!
+    ctx.fillStyle = '#153463'
+    ctx.fillRect(0, 0, 128, 48)
+    ctx.fillStyle = 'white'
+    ctx.font = 'bold 30px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('POLICE', 64, 24)
+    const signTexture = new CanvasTexture(signCanvas)
+    const patrolParts = [
+      {
+        name: 'patrol-rider',
+        geometry: new BoxGeometry(0.42, 0.6, 0.26),
+        material: new MeshLambertMaterial({ color: '#17335c' }),
+        x: 0,
+        y: 1.27,
+        z: 0.13,
+      },
+      {
+        name: 'patrol-helmet',
+        geometry: new BoxGeometry(0.3, 0.3, 0.3),
+        material: new MeshLambertMaterial({ color: '#eff2ed' }),
+        x: 0,
+        y: 1.73,
+        z: 0.08,
+      },
+      {
+        name: 'patrol-light',
+        geometry: new BoxGeometry(0.16, 0.15, 0.16),
+        material: new MeshLambertMaterial({
+          color: '#2399f5',
+          emissive: '#0051aa',
+          emissiveIntensity: 0.8,
+        }),
+        x: 0,
+        y: 1.08,
+        z: 0.9,
+      },
+      {
+        name: 'patrol-sign',
+        geometry: new PlaneGeometry(0.4, 0.15),
+        material: new MeshBasicMaterial({ map: signTexture }),
+        x: 0,
+        y: 1.31,
+        z: 0.265,
+      },
+    ].map((part) => ({
+      ...part,
+      mesh: new InstancedMesh(part.geometry, part.material, agents.length),
+    }))
+    for (const part of patrolParts) {
+      part.mesh.count = 0
+      part.mesh.frustumCulled = false
+      part.mesh.name = part.name
+    }
     const wheels = new InstancedMesh(wheel, wheelMaterial, agents.length * 4)
     wheels.count = 0
     wheels.frustumCulled = false
-    return { graph, agents, simulation, material, wheelMaterial, wheel, bodies, wheels }
+    return {
+      graph,
+      agents,
+      simulation,
+      material,
+      wheelMaterial,
+      wheel,
+      bodies,
+      wheels,
+      patrolParts,
+      signTexture,
+    }
   }, [zone, start])
   useEffect(() => {
     const root = group.current
     for (const b of scene.bodies) root?.add(b.mesh)
     root?.add(scene.wheels)
+    for (const part of scene.patrolParts) root?.add(part.mesh)
     return () => {
+      for (const part of scene.patrolParts) {
+        root?.remove(part.mesh)
+        part.mesh.dispose()
+        part.geometry.dispose()
+        part.material.dispose()
+      }
+      scene.signTexture.dispose()
       for (const b of scene.bodies) {
         root?.remove(b.mesh)
         b.mesh.dispose()
@@ -130,7 +212,8 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
     const playing = useGame.getState().phase === 'playing'
     if (playing) runtime.trafficTime += Math.min(delta, 0.05)
     const counts = [0, 0, 0]
-    let wheelCount = 0
+    let wheelCount = 0,
+      patrolCount = 0
     const { matrix, local, root, position, scale, rotation, euler, color } = tools
     // Collect physical obstacles before advancing anyone, then arbitrate all shared
     // junctions from the same snapshot instead of giving the first rendered car priority.
@@ -175,11 +258,25 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
         scale.set(1, 1, 1),
       )
       body.mesh.setMatrixAt(slot, root)
-      const livery = LIVERIES[agent.kind][agent.seed % LIVERIES[agent.kind].length]
+      const livery = agent.patrol
+        ? { base: '#e9edf1', accent: '#143766', pattern: 3 }
+        : LIVERIES[agent.kind][agent.seed % LIVERIES[agent.kind].length]
       body.mesh.setColorAt(slot, color.set(livery.base))
       const a = body.geo.getAttribute('livery') as InstancedBufferAttribute
       color.set(livery.accent)
       a.setXYZW(slot, color.r, color.g, color.b, livery.pattern)
+      if (agent.patrol) {
+        for (const part of scene.patrolParts) {
+          local.compose(
+            position.set(part.x, part.y, part.z),
+            rotation.identity(),
+            scale.set(1, 1, 1),
+          )
+          matrix.multiplyMatrices(root, local)
+          part.mesh.setMatrixAt(patrolCount, matrix)
+        }
+        patrolCount++
+      }
       for (const mount of body.model.wheels) {
         local.compose(
           position.set(mount.x, spec.wheelRadius, -mount.forward),
@@ -196,6 +293,10 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
       b.mesh.instanceMatrix.needsUpdate = true
       if (b.mesh.instanceColor) b.mesh.instanceColor.needsUpdate = true
       b.geo.getAttribute('livery').needsUpdate = true
+    }
+    for (const part of scene.patrolParts) {
+      part.mesh.count = patrolCount
+      part.mesh.instanceMatrix.needsUpdate = true
     }
     scene.wheels.count = wheelCount
     scene.wheels.instanceMatrix.needsUpdate = true

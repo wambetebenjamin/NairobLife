@@ -54,6 +54,12 @@ Phase 3 is in progress. Later phases are plans, not promises.
       an unoccupied location away from the player and camera. Motion is still simplified:
       unconnected crossings, short links and turns can overlap or jam, restarts are not
       seamless, and elevated roads are not used. This is not a complete traffic simulation.
+- [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,
+      marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
+      is no pursuit, siren or policing gameplay, and State House is outside the map.
+- [x] Separate looping 3D scenic previews inspired by Nairobi National Park and SGR,
+      accessible from Teleport. These are stylised fictional dioramas, not real mapped
+      routes, wildlife simulation, railway service or walkable destinations.
 - [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
       Market; short walking paths include pauses. People are visual-only, not AI agents.
 - [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.
@@ -71,7 +77,9 @@ Phase 3 is in progress. Later phases are plans, not promises.
 ## Phase 4: a bigger, better-looking Nairobi
 
 - [ ] More zones, loaded as you approach them: Upper Hill, Westlands, Kilimani, then
-      JKIA and Mombasa Road
+      JKIA and Mombasa Road. State House, Nyayo, Talanta and Kasarani stadiums,
+      Nairobi National Park, the SGR and major malls need their own actual mapped zones;
+      they cannot be visited from the current CBD map.
 - [ ] Terrain: the real slope from Upper Hill down to the Nairobi River
 - [ ] Hand-made models for the icons: KICC, Parliament's clock tower, Jamia Mosque,
       the National Archives, the Railway Station
@@ -101,6 +109,5 @@ sync, and it brings accounts and a database. See `.env.example` for the settings
 
 - Jacaranda season: purple trees in October and November, tied to the real date
 - A street search and walking route line in the map, like a sat-nav
-- Nairobi National Park on the southern edge
 - Billboards with real (opt-in) community art
 - A WebGPU renderer as an opt-in for capable devices

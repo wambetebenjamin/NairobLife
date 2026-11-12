@@ -15,6 +15,7 @@ import { runtime } from '../state/runtime'
 import { CloseIcon, NorthIcon } from './icons'
 import { getMapImage } from './mapImage'
 import { useT } from './useT'
+import { ScenicPreview, type ScenicKind } from './ScenicPreview'
 
 const projection = createProjection(WORLD_ORIGIN)
 const GROUPS: Landmark['group'][] = ['Downtown', 'Parks & campus', 'Up high']
@@ -25,6 +26,12 @@ export function TeleportMenu() {
   const map = useMemo(() => (zone ? getMapImage(zone.file) : null), [zone])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [scenic, setScenic] = useState<ScenicKind | null>(null)
+  const scenicLauncher = useRef<HTMLButtonElement | null>(null)
+  const closeScenic = () => {
+    setScenic(null)
+    requestAnimationFrame(() => scenicLauncher.current?.focus())
+  }
 
   // Copy the pre-rendered map into this dialog's canvas.
   useEffect(() => {
@@ -65,6 +72,50 @@ export function TeleportMenu() {
         <div className="teleport">
           <div className="teleport__list">
             <RidePlanner zone={zone} />
+            <section className="ride-planner">
+              <h3>Scenic previews</h3>
+              <p>Explore fictional 3D previews while the wider city is being built.</p>
+              <button
+                className="button scenic-launch"
+                onClick={(e) => {
+                  scenicLauncher.current = e.currentTarget
+                  setScenic('park')
+                }}
+              >
+                Nairobi National Park preview
+              </button>
+              <button
+                className="button scenic-launch"
+                onClick={(e) => {
+                  scenicLauncher.current = e.currentTarget
+                  setScenic('sgr')
+                }}
+              >
+                SGR train preview
+              </button>
+            </section>
+            <section>
+              <h3>Requested destinations · planned</h3>
+              <p className="destination-note">Outside the playable CBD map. Not yet visitable.</p>
+              {[
+                'State House Nairobi',
+                'Nyayo National Stadium',
+                'Talanta Sports City Stadium',
+                'Kasarani Stadium',
+                'Sarit Centre',
+                'Westgate',
+                'Two Rivers Mall',
+                'Garden City Mall',
+                'Yaya Centre',
+                'The Hub Karen',
+                'Village Market',
+              ].map((name) => (
+                <div className="place place--soon" key={name}>
+                  <strong>{name}</strong>
+                  <span>Planned</span>
+                </div>
+              ))}
+            </section>
             {GROUPS.map((group) => (
               <section key={group}>
                 <h3>{group}</h3>
@@ -120,6 +171,7 @@ export function TeleportMenu() {
             </div>
           </div>
         </div>
+        {scenic && <ScenicPreview kind={scenic} onClose={closeScenic} onChange={setScenic} />}
       </div>
     </div>
   )

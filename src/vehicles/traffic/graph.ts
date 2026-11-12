@@ -82,6 +82,8 @@ export interface TrafficAgent {
   turns: number
   /** At a dead end, remain in place until the scheduler finds a safe restart. */
   respawn?: boolean
+  /** Decorative police patrol; same traffic rules, no pursuit or law enforcement. */
+  patrol?: boolean
 }
 
 export function makeTraffic(
@@ -104,7 +106,15 @@ export function makeTraffic(
     edge: id,
     progress: edge.length * (0.2 + 0.6 * hash01(seed, 5)),
     speed: 5 + 3 * hash01(seed, 6),
-    kind: seed % 7 === 0 ? 'matatu' : seed % 8 === 0 ? 'boda' : 'car',
+    kind:
+      seed === 2 || seed === 5 || seed === 8
+        ? 'boda'
+        : seed % 7 === 0
+          ? 'matatu'
+          : seed % 8 === 0
+            ? 'boda'
+            : 'car',
+    patrol: seed === 2 || seed === 5 || seed === 8,
     seed,
     wait: 0,
     stopped: false,

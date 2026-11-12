@@ -1268,3 +1268,57 @@ kbd {
   background: var(--accent);
   color: var(--accent-ink);
 }
+
+.scenic-launch {
+  width: 100%;
+  margin-top: 8px;
+  text-align: left;
+}
+.destination-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.scenic {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #151a1c;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: max(12px, var(--safe-top)) max(16px, var(--safe-right)) max(12px, var(--safe-bottom))
+    max(16px, var(--safe-left));
+}
+.scenic__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.scenic__header h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(16px, 3vw, 26px);
+}
+.scenic__eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.scenic__note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.scenic__view {
+  flex: 1;
+  min-height: 100px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.scenic__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
