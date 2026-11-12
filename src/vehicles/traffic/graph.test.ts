@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { VEHICLES } from '../../config/vehicles'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import {
   buildRoadGraph,
@@ -96,13 +97,21 @@ describe('ambient traffic graph', () => {
     expect(car.wait).toBe(3)
     expect(car.respawn).toBe(true)
   })
-  it('keeps a same-edge following gap but ignores opposing or behind vehicles', () => {
+  it('keeps a same-edge following gap sized to both vehicles, ignoring opponents', () => {
     const follower = agent('matatu')
     const ahead = { ...agent(), progress: 22 }
     const behind = { ...agent(), progress: 1, edge: 1 }
-    expect(sameEdgeClearance(follower, [follower, ahead, behind])).toBe(12)
-    stepTraffic(follower, graph, sameEdgeClearance(follower, [follower, ahead]) / follower.speed)
-    expect(follower.progress).toBe(12)
-    expect(sameEdgeClearance(follower, [follower, ahead])).toBe(0)
+    // The gap kept is half of each vehicle's length plus two metres of air.
+    const gap = VEHICLES.matatu.length / 2 + VEHICLES.car.length / 2 + 2
+    expect(sameEdgeClearance(follower, [follower, ahead, behind])).toBeCloseTo(22 - gap, 5)
+    const available = sameEdgeClearance(follower, [follower, ahead])
+    // `stepTraffic` moves along whole edges and stops at each vertex, so ask for a little
+    // less than the whole gap: this is a following distance, not an exact target.
+    stepTraffic(follower, graph, (available - 0.5) / follower.speed)
+    expect(follower.progress).toBeCloseTo(available - 0.5, 5)
+    expect(follower.progress).toBeLessThan(available)
+    // Half a metre of the two metres of air is gone, but it may still creep that last
+    // little way: 0.5 m of air remains.
+    expect(sameEdgeClearance(follower, [follower, ahead])).toBeCloseTo(0.5, 5)
   })
 })

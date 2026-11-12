@@ -1,4 +1,5 @@
 /** Directed ground-level road graph and simple ambient traffic. */
+import { VEHICLES } from '../../config/vehicles'
 import { hash01 } from '../../core/random'
 import { DRIVABLE, type ZoneFile } from '../../world/zone/format'
 
@@ -45,6 +46,10 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
         const t = Math.max(0, Math.min(1, (px * (bx - ax) + pz * (bz - az)) / (length * length)))
         return Math.hypot(px - t * (bx - ax), pz - t * (bz - az)) < 18
       })
+      // Two ways that share a vertex but join at an angle still meet at a junction, so
+      // both directions of a two-way road arrive there. The bake stores `ow` only when a
+      // way really is one-way.
+      const oneWay = !!road.ow
       const add = (a: number, b: number, c: number, d: number, from: string, to: string) => {
         const edge: Edge = {
           ax: a,
@@ -54,7 +59,7 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
           length,
           width: road.w,
           lanes: road.ln ?? Math.max(1, Math.floor(road.w / 3.3)),
-          oneWay: !!road.ow,
+          oneWay,
           from,
           to,
           stage,
@@ -65,7 +70,7 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
         outgoing.set(from, list)
       }
       add(ax, az, bx, bz, key(x1, z1), key(x2, z2))
-      if (!road.ow) add(bx, bz, ax, az, key(x2, z2), key(x1, z1))
+      if (!oneWay) add(bx, bz, ax, az, key(x2, z2), key(x1, z1))
     }
   }
   return { edges, outgoing }
@@ -141,6 +146,7 @@ export function stepTraffic(
   graph: RoadGraph,
   dt: number,
   blocked = false,
+  stageWait = 3,
 ): void {
   if (dt <= 0 || !graph.edges.length) return
   if (agent.wait > 0) {
@@ -160,7 +166,7 @@ export function stepTraffic(
     ) {
       agent.progress = edge.length * 0.5
       agent.stopped = true
-      agent.wait = 3
+      agent.wait = stageWait
       return
     }
     const dist = edge.length - agent.progress
@@ -184,14 +190,25 @@ export function stepTraffic(
   }
 }
 
-/** Available metres before the vehicle ahead on the same directed segment, keeping a gap.
- * This is a visual headway aid, not collision detection at junctions or across segments. */
+/** Half the length of a vehicle of this kind, in metres, from the spec table. */
+const halfLength = (kind: TrafficAgent['kind']) => VEHICLES[kind].length / 2
+
+/**
+ * Available metres before the vehicle ahead on the same directed segment. The gap kept
+ * is both vehicles' half-lengths plus a little air, so a matatu behind a boda does not
+ * shove the boda along, and two cars in a queue stand bumper to bumper rather than seven
+ * metres apart.
+ *
+ * This is a following aid along one edge, not collision detection across a junction or
+ * between two edges that run side by side.
+ */
 export function sameEdgeClearance(agent: TrafficAgent, agents: readonly TrafficAgent[]): number {
   let available = Infinity
-  const gap = agent.kind === 'matatu' ? 10 : 7
+  const gap = halfLength(agent.kind) + 2
   for (const other of agents) {
     if (other === agent || other.edge !== agent.edge || other.progress <= agent.progress) continue
-    available = Math.min(available, Math.max(0, other.progress - agent.progress - gap))
+    const keep = gap + halfLength(other.kind)
+    available = Math.min(available, Math.max(0, other.progress - agent.progress - keep))
   }
   return available
 }

@@ -1,42 +1,66 @@
-/** Simplified coordinated two-axis signal cycle for mapped intersections. */
-import { greenAxis } from '../../core/trafficSignals'
+/**
+ * Which crossings a mapped traffic signal governs.
+ *
+ * OSM maps a signal as a point. The bank decides the crossing by geometry: any junction
+ * box whose nearest approach passes within `SIGNAL_REACH` of the signal is signalised.
+ * That is a little generous compared with the real street, but the alternative — matching
+ * a point to one graph node — misses every crossing the graph does not share a node with,
+ * which in this map is most of the busy ones.
+ */
+import type { Crossing } from './crossings'
+import type { RoadGraph } from './graph'
 import type { ZoneFile } from '../../world/zone/format'
-import type { Edge, RoadGraph, TrafficAgent } from './graph'
 
-/** Snap each mapped signal to its nearest ground-road endpoint, within 25 m. */
-export function signalNodes(zone: ZoneFile, graph: RoadGraph): Set<string> {
-  const nodes = new Map<string, { x: number; z: number }>()
-  for (const edge of graph.edges) nodes.set(edge.to, { x: edge.bx, z: edge.bz })
-  const result = new Set<string>()
-  for (const poi of zone.pois) {
-    if (poi.k !== 'signal') continue
-    let nearest = '',
-      distance = 25
-    for (const [key, node] of nodes) {
-      const d = Math.hypot(node.x - poi.x / zone.q, node.z - poi.z / zone.q)
-      if (d <= distance) {
-        distance = d
-        nearest = key
+/** A signal governs a crossing whose approaches run this close to it, in metres. */
+export const SIGNAL_REACH = 22
+
+/** Indices into `crossings` that carry at least one mapped signal. */
+export function signalCrossings(
+  zone: ZoneFile,
+  graph: RoadGraph,
+  crossings: Crossing[],
+): Set<number> {
+  const signals = zone.pois.filter((poi) => poi.k === 'signal')
+  const result = new Set<number>()
+  if (!signals.length) return result
+  for (const crossing of crossings) {
+    for (const { edge } of crossing.approaches) {
+      const spec = graph.edges[edge]
+      if (!spec) continue
+      const reach = SIGNAL_REACH * zone.q
+      if (
+        signals.some(
+          (poi) =>
+            distanceToSegment(
+              poi.x,
+              poi.z,
+              spec.ax * zone.q,
+              spec.az * zone.q,
+              spec.bx * zone.q,
+              spec.bz * zone.q,
+            ) <= reach,
+        )
+      ) {
+        result.add(crossing.id)
+        break
       }
     }
-    if (nearest) result.add(nearest)
   }
   return result
 }
 
-export function edgeAxis(edge: Edge): 'x' | 'z' {
-  return Math.abs(edge.bx - edge.ax) >= Math.abs(edge.bz - edge.az) ? 'x' : 'z'
-}
-
-/** Metres until the stop line on red. Vehicles already past the line may clear the junction. */
-export function signalClearance(
-  agent: TrafficAgent,
-  edge: Edge,
-  nodes: Set<string>,
-  seconds: number,
+function distanceToSegment(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
 ): number {
-  if (!nodes.has(edge.to) || greenAxis(seconds) === edgeAxis(edge)) return Infinity
-  const line = Math.max(0, edge.length - 4)
-  if (agent.progress > line + 0.01) return Infinity
-  return Math.max(0, line - agent.progress)
+  const dx = bx - ax
+  const dz = bz - az
+  const lengthSq = dx * dx + dz * dz
+  const t =
+    lengthSq > 1e-9 ? Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lengthSq)) : 0
+  return Math.hypot(ax + dx * t - px, az + dz * t - pz)
 }

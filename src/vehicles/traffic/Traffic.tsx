@@ -25,7 +25,8 @@ import type { LoadedZone } from '../../world/zone/loadZone'
 import { buildVehicleModel, buildWheelGeometry } from '../models/vehicleModels'
 import { createVehicleMaterial, createWheelMaterial } from '../view/vehicleMaterials'
 import { buildRoadGraph, makeTraffic, trafficPose, type TrafficAgent } from './graph'
-import { signalNodes } from './signals'
+import { findCrossings, type Crossing } from './crossings'
+import { signalCrossings } from './signals'
 import { TrafficSimulation } from './simulation'
 import {
   clearRestart,
@@ -37,6 +38,20 @@ import {
 const KINDS = ['car', 'matatu', 'boda'] as const
 const RANGE = { low: 120, medium: 180, high: 240 }
 
+/**
+ * Junction discovery walks every pair of nearby roads (about a fifth of a second for the
+ * CBD), and it only depends on the map, so it is done once per zone and shared by every
+ * simulation, remount and zone reload.
+ */
+const junctionCache = new WeakMap<object, Crossing[]>()
+function crossingsFor(zone: LoadedZone): Crossing[] {
+  const cached = junctionCache.get(zone.file)
+  if (cached) return cached
+  const found = findCrossings(buildRoadGraph(zone.file))
+  junctionCache.set(zone.file, found)
+  return found
+}
+
 export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number; z: number } }) {
   const quality = useQuality()
   const { world, rapier } = useRapier()
@@ -45,8 +60,9 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
   const scene = useMemo(() => {
     const graph = buildRoadGraph(zone.file)
     const agents = makeTraffic(graph, start)
-    const signals = signalNodes(zone.file, graph)
-    const simulation = new TrafficSimulation(graph, agents, signals)
+    const crossings = crossingsFor(zone)
+    const signalised = signalCrossings(zone.file, graph, crossings)
+    const simulation = new TrafficSimulation(graph, agents, { signalised })
     const material = createVehicleMaterial(),
       wheelMaterial = createWheelMaterial(),
       wheel = buildWheelGeometry()
