@@ -6,7 +6,7 @@ import type { TrafficAgent } from './graph'
 
 type RapierModule = Pick<
   typeof import('@dimforge/rapier3d-compat'),
-  'ColliderDesc' | 'Ball' | 'QueryFilterFlags'
+  'ColliderDesc' | 'Ball' | 'Cuboid' | 'QueryFilterFlags'
 >
 type Pose = { x: number; z: number; yaw: number }
 
@@ -65,4 +65,27 @@ export function vehicleAhead(
     (c) => c.collisionGroups() === VEHICLE_GROUPS,
   )
   return !!hit
+}
+
+/** Reject a restart point occupied by any other vehicle box. */
+export function clearRestart(
+  world: RAPIER.World,
+  rapier: RapierModule,
+  self: RAPIER.Collider,
+  agent: TrafficAgent,
+  pose: Pose,
+): boolean {
+  const spec = VEHICLES[agent.kind]
+  const shape = new rapier.Cuboid(spec.width / 2 + 1, spec.height / 2, spec.length / 2 + 1)
+  const hit = world.intersectionWithShape(
+    { x: pose.x, y: spec.height / 2, z: pose.z },
+    { x: 0, y: Math.sin(pose.yaw / 2), z: 0, w: Math.cos(pose.yaw / 2) },
+    shape,
+    rapier.QueryFilterFlags.EXCLUDE_SENSORS,
+    VEHICLE_GROUPS,
+    self,
+    undefined,
+    (c) => c.collisionGroups() === VEHICLE_GROUPS,
+  )
+  return !hit
 }

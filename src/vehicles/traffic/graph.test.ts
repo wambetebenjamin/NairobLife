@@ -80,9 +80,10 @@ describe('ambient traffic graph', () => {
     car.edge = 2
     car.progress = 29
     stepTraffic(car, graph, 1)
-    expect(car.edge).toBe(1)
-    expect(car.progress).toBe(0)
+    expect(car.edge).toBe(2)
+    expect(car.progress).toBe(30)
     expect(car.wait).toBe(3)
+    expect(car.respawn).toBe(true)
   })
   it('keeps a same-edge following gap but ignores opposing or behind vehicles', () => {
     const follower = agent('matatu')

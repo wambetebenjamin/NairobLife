@@ -1,7 +1,12 @@
 import RAPIER from '@dimforge/rapier3d-compat'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { VEHICLE_GROUPS } from '../../world/physics/groups'
-import { createTrafficCollider, placeTrafficCollider, vehicleAhead } from './colliders'
+import {
+  clearRestart,
+  createTrafficCollider,
+  placeTrafficCollider,
+  vehicleAhead,
+} from './colliders'
 import type { TrafficAgent } from './graph'
 
 beforeAll(async () => {
@@ -29,6 +34,8 @@ describe('ambient traffic solid boxes', () => {
     )
     world.step()
     expect(vehicleAhead(world, RAPIER, traffic, agent, pose)).toBe(true)
+    expect(clearRestart(world, RAPIER, traffic, agent, { x: 0, z: -6, yaw: 0 })).toBe(false)
+    expect(clearRestart(world, RAPIER, traffic, agent, { x: 20, z: -6, yaw: 0 })).toBe(true)
     const hit = world.castRay(new RAPIER.Ray({ x: -5, y: 1, z: 0 }, { x: 1, y: 0, z: 0 }), 10, true)
     expect(hit?.collider.handle).toBe(traffic.handle)
     world.removeCollider(other, true)

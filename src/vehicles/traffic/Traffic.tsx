@@ -19,9 +19,15 @@ import { runtime } from '../../state/runtime'
 import type { LoadedZone } from '../../world/zone/loadZone'
 import { buildVehicleModel, buildWheelGeometry } from '../models/vehicleModels'
 import { createVehicleMaterial, createWheelMaterial } from '../view/vehicleMaterials'
-import { buildRoadGraph, makeTraffic, sameEdgeClearance, stepTraffic, trafficPose } from './graph'
-import { signalClearance, signalNodes } from './signals'
-import { createTrafficCollider, placeTrafficCollider, vehicleAhead } from './colliders'
+import { buildRoadGraph, makeTraffic, trafficPose, type TrafficAgent } from './graph'
+import { signalNodes } from './signals'
+import { TrafficSimulation } from './simulation'
+import {
+  clearRestart,
+  createTrafficCollider,
+  placeTrafficCollider,
+  vehicleAhead,
+} from './colliders'
 
 const KINDS = ['car', 'matatu', 'boda'] as const
 const RANGE = { low: 120, medium: 180, high: 240 }
@@ -35,6 +41,7 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
     const graph = buildRoadGraph(zone.file)
     const agents = makeTraffic(graph, start)
     const signals = signalNodes(zone.file, graph)
+    const simulation = new TrafficSimulation(graph, agents, signals)
     const material = createVehicleMaterial(),
       wheelMaterial = createWheelMaterial(),
       wheel = buildWheelGeometry()
@@ -61,7 +68,7 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
     const wheels = new InstancedMesh(wheel, wheelMaterial, agents.length * 4)
     wheels.count = 0
     wheels.frustumCulled = false
-    return { graph, agents, signals, material, wheelMaterial, wheel, bodies, wheels }
+    return { graph, agents, simulation, material, wheelMaterial, wheel, bodies, wheels }
   }, [zone, start])
   useEffect(() => {
     const root = group.current
@@ -125,33 +132,34 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
     const counts = [0, 0, 0]
     let wheelCount = 0
     const { matrix, local, root, position, scale, rotation, euler, color } = tools
-    for (const [agentIndex, agent] of scene.agents.entries()) {
-      let edge = scene.graph.edges[agent.edge]
-      let pose = trafficPose(edge, agent.progress)
-      const player = runtime.player
-      const dx = player.x - pose.x,
-        dz = player.z - pose.z
-      // Near the player, sense other vehicle boxes ahead. Traffic remains a simple
-      // graph simulation rather than a physics-driven AI, especially at junctions.
-      const collider = colliders.current[agentIndex]
-      const nearby = Math.hypot(dx, dz) < 180
-      const blocked =
-        Math.hypot(dx, dz) < 7 ||
-        !!(nearby && collider && vehicleAhead(world, rapier, collider, agent, pose))
-      if (playing) {
-        const dt = Math.min(delta, 0.05)
-        const clearance = Math.min(
-          sameEdgeClearance(agent, scene.agents),
-          signalClearance(agent, edge, scene.signals, runtime.trafficTime),
+    // Collect physical obstacles before advancing anyone, then arbitrate all shared
+    // junctions from the same snapshot instead of giving the first rendered car priority.
+    if (playing) {
+      const blocked = new Set<TrafficAgent>()
+      scene.agents.forEach((agent, i) => {
+        const pose = trafficPose(scene.graph.edges[agent.edge], agent.progress)
+        const distance = Math.hypot(runtime.player.x - pose.x, runtime.player.z - pose.z)
+        const collider = colliders.current[i]
+        if (
+          distance < 7 ||
+          (distance < 180 && collider && vehicleAhead(world, rapier, collider, agent, pose))
         )
-        // Same-segment headway and mapped red signals. Other segments and
-        // uncontrolled junctions are not collision-aware yet.
-        const limited = Math.min(dt, clearance / agent.speed)
-        if (limited > 0) stepTraffic(agent, scene.graph, limited, blocked)
-        else if (agent.wait > 0) stepTraffic(agent, scene.graph, dt, true)
-      }
-      edge = scene.graph.edges[agent.edge]
-      pose = trafficPose(edge, agent.progress)
+          blocked.add(agent)
+      })
+      scene.simulation.step(Math.min(delta, 0.05), runtime.trafficTime, blocked, (agent, pose) => {
+        // Restart outside the camera's largest draw radius, not on a parked/driven car.
+        if (
+          Math.hypot(runtime.player.x - pose.x, runtime.player.z - pose.z) < 260 ||
+          Math.hypot(camera.position.x - pose.x, camera.position.z - pose.z) < 260
+        )
+          return false
+        const collider = colliders.current[scene.agents.indexOf(agent)]
+        return !!collider && clearRestart(world, rapier, collider, agent, pose)
+      })
+    }
+    for (const agent of scene.agents) {
+      const edge = scene.graph.edges[agent.edge]
+      const pose = trafficPose(edge, agent.progress)
       if (
         (pose.x - camera.position.x) ** 2 + (pose.z - camera.position.z) ** 2 >
         RANGE[quality] ** 2

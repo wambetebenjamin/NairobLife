@@ -80,6 +80,8 @@ export interface TrafficAgent {
   wait: number
   stopped: boolean
   turns: number
+  /** At a dead end, remain in place until the scheduler finds a safe restart. */
+  respawn?: boolean
 }
 
 export function makeTraffic(
@@ -123,7 +125,7 @@ export function trafficPose(edge: Edge, progress: number) {
   }
 }
 
-/** Advance along connected directed edges. Isolated dead ends are restarted elsewhere. */
+/** Advance along connected directed edges. The scheduler handles dead-end restarts. */
 export function stepTraffic(
   agent: TrafficAgent,
   graph: RoadGraph,
@@ -135,7 +137,7 @@ export function stepTraffic(
     agent.wait = Math.max(0, agent.wait - dt)
     return
   }
-  if (blocked) return
+  if (blocked || agent.respawn) return
   let remaining = agent.speed * dt
   for (let guard = 0; guard < 40 && remaining > 0; guard++) {
     const edge = graph.edges[agent.edge]
@@ -163,9 +165,7 @@ export function stepTraffic(
     if (!outgoing.length) {
       agent.progress = edge.length
       agent.wait = 3
-      agent.edge = (agent.edge + 43) % graph.edges.length
-      agent.progress = 0
-      agent.stopped = false
+      agent.respawn = true
       return
     }
     agent.edge = outgoing[Math.floor(hash01(agent.seed, 23 + agent.turns++) * outgoing.length)]
