@@ -1,5 +1,11 @@
 import { LANGUAGES, type StringKey } from '../config/strings'
-import { useGame, type Haze, type Quality, type Settings } from '../state/gameStore'
+import {
+  useGame,
+  type Haze,
+  type Quality,
+  type Settings,
+  type WeatherSetting,
+} from '../state/gameStore'
 import { CloseIcon } from './icons'
 import { useT } from './useT'
 
@@ -8,6 +14,13 @@ const QUALITY: { id: Quality; label: StringKey }[] = [
   { id: 'high', label: 'qualityHigh' },
   { id: 'medium', label: 'qualityMedium' },
   { id: 'low', label: 'qualityLow' },
+]
+
+const WEATHER: { id: WeatherSetting; label: StringKey }[] = [
+  { id: 'season', label: 'weatherSeason' },
+  { id: 'long-rains', label: 'weatherLongRains' },
+  { id: 'short-rains', label: 'weatherShortRains' },
+  { id: 'off', label: 'weatherOff' },
 ]
 
 const HAZE: { id: Haze; label: StringKey }[] = [
@@ -60,6 +73,13 @@ export function SettingsPanel() {
             options={HAZE.map((option) => ({ id: option.id, label: t(option.label) }))}
             value={settings.haze}
             onChange={(haze) => update({ haze })}
+          />
+        </Row>
+        <Row label={t('weather')} note="Nairobi's rains, by the real calendar">
+          <Segmented
+            options={WEATHER.map((option) => ({ id: option.id, label: t(option.label) }))}
+            value={settings.weather}
+            onChange={(weather) => update({ weather })}
           />
         </Row>
         <Row label="Camera">

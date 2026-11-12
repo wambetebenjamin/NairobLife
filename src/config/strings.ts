@@ -40,6 +40,11 @@ const en = {
   hazeClear: 'Clear',
   hazeHazy: 'Hazy',
   hazeDusty: 'Dusty',
+  weather: 'Weather',
+  weatherSeason: 'Follow the season',
+  weatherLongRains: 'Long rains',
+  weatherShortRains: 'Short rains',
+  weatherOff: 'Dry',
   qualityAuto: 'Auto',
   qualityHigh: 'High',
   qualityMedium: 'Medium',
@@ -99,6 +104,11 @@ const sheng: Partial<Record<StringKey, string>> = {
   handbrake: 'Breki',
   tooFastToExit: 'Punguza speed kwanza ndio ushuke.',
   noRoomToExit: 'Hakuna nafasi ya kushuka hapa. Sogeza gari kiasi.',
+  weather: 'Hali ya anga',
+  weatherSeason: 'Fuata msimu',
+  weatherLongRains: 'Masika',
+  weatherShortRains: 'Vuli',
+  weatherOff: 'Kiangazi',
 }
 
 export type Language = 'en' | 'sheng'

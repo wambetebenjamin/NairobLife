@@ -10,7 +10,7 @@ import { translate, type StringKey } from '../config/strings'
 import { attachKeyboard, input } from '../input/input'
 import { attachPointer } from '../input/pointer'
 import { resolveLandmark } from '../player/teleport'
-import { HAZE_ORDER, QUALITY_ORDER, cycle, useGame } from '../state/gameStore'
+import { HAZE_ORDER, QUALITY_ORDER, WEATHER_ORDER, cycle, useGame } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import type { RideRoute } from '../vehicles/ride/routes'
 
@@ -156,6 +156,18 @@ export function cycleQuality(): void {
   game().toast(`${t('quality')}: ${t(label[quality])}`)
 }
 
+export function cycleWeather(): void {
+  const weather = cycle(WEATHER_ORDER, game().settings.weather)
+  game().updateSettings({ weather })
+  const label = {
+    season: 'weatherSeason',
+    'long-rains': 'weatherLongRains',
+    'short-rains': 'weatherShortRains',
+    off: 'weatherOff',
+  } as const
+  game().toast(`${t('weather')}: ${t(label[weather])}`)
+}
+
 export function cycleHaze(): void {
   const haze = cycle(HAZE_ORDER, game().settings.haze)
   game().updateSettings({ haze })
@@ -214,6 +226,8 @@ function onTap(action: TapAction): void {
       return cycleQuality()
     case 'haze':
       return cycleHaze()
+    case 'weather':
+      return cycleWeather()
     case 'timeBack':
       return shiftTime(-1)
     case 'timeForward':

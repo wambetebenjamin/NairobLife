@@ -8,8 +8,8 @@
  *
  * Pure functions, no three.js: the numbers are applied in Environment.tsx.
  *
- * TODO(weather): rain. The long rains (March to May) and short rains (October to
- * December) deserve overcast skies, wet roads and puddles.
+ * Rain is layered on top of this by `weather.ts`: it greys these colours and dims the
+ * light, and `Environment.tsx` applies both.
  */
 import { TIME } from '../../config/game'
 import { smoothstep } from '../../core/math'

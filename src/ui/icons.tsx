@@ -41,6 +41,13 @@ export const MoonIcon = () => (
   </Icon>
 )
 
+export const RainIcon = () => (
+  <Icon>
+    <path d="M4.6 10.2a2.9 2.9 0 0 1 .3-5.8 3.9 3.9 0 0 1 7.4 1 2.4 2.4 0 0 1-.5 4.8Z" />
+    <path d="M5.7 12.5 4.9 14M8.6 12.5l-.8 1.5M11.5 12.5l-.8 1.5" />
+  </Icon>
+)
+
 export const FullscreenIcon = () => (
   <Icon>
     <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />

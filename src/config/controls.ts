@@ -16,6 +16,7 @@ export type TapAction =
   | 'hud'
   | 'quality'
   | 'haze'
+  | 'weather'
   | 'timeBack'
   | 'timeForward'
   | 'fullscreen'
@@ -45,6 +46,7 @@ export const TAP_KEYS: Record<string, TapAction> = {
   KeyH: 'hud',
   KeyG: 'quality',
   KeyL: 'haze',
+  KeyN: 'weather',
   BracketLeft: 'timeBack',
   BracketRight: 'timeForward',
   KeyK: 'fullscreen',
@@ -71,6 +73,7 @@ export const CONTROLS_HELP: readonly ControlsRow[] = [
   { keys: ['V'], label: 'Camera' },
   { keys: ['[', ']'], label: 'Time of day' },
   { keys: ['L'], label: 'Haze' },
+  { keys: ['N'], label: 'Weather' },
   { keys: ['G'], label: 'Graphics' },
   { keys: ['H'], label: 'Hide HUD' },
   { keys: ['Esc'], label: 'Pause' },

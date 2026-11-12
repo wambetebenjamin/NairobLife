@@ -1,7 +1,7 @@
 /**
  * Materials for the ground plane and the decals painted on it.
  */
-import { MeshLambertMaterial, ShaderChunk, Vector4 } from 'three'
+import { Color, MeshLambertMaterial, ShaderChunk, Vector4 } from 'three'
 import { GROUND } from '../geometry/palette'
 
 /** The line in three.js's lighting code where a spot light's contribution is worked out. */
@@ -33,8 +33,41 @@ export function catchHeadlights(fragmentShader: string): string {
   )
 }
 
-/** Shader cache key for the plain ground materials that only add `catchHeadlights`. */
-const HEADLIT_KEY = 'kanairo-headlit-ground-v1'
+/**
+ * Shared by every surface the rain falls on: how wet the ground is, 0 dry .. 1 soaked.
+ * `runtime.wetness` writes it once a frame; the decal and structure shaders read it.
+ *
+ * Wet tarmac is darker than dry tarmac and, being covered in a film of water, mirrors
+ * the sky. So the shader darkens the paint and adds a sky-coloured sheen that is
+ * strongest straight ahead, which is exactly where the light reflecting off the road
+ * comes from when you look down a street in the rain.
+ */
+export const wetUniforms = {
+  uWetness: { value: 0 },
+  /** The sky as the road reflects it: set to the horizon colour each frame. */
+  uSky: { value: new Color(0.5, 0.55, 0.6) },
+}
+
+/** GLSL for the sheen, shared by the decals and the flyover decks. */
+const WET_PARS = /* glsl */ `
+uniform float uWetness;
+uniform vec3 uSky;
+varying vec3 vWetView;
+`
+
+/** Pass the view direction from vertex to fragment for the grazing-angle sheen. */
+const WET_VERTEX_PARS = /* glsl */ `
+varying vec3 vWetView;
+`
+
+/** Grazing angle: 0 straight down at the road, 1 looking along it towards the horizon. */
+const WET_FRAGMENT = /* glsl */ `
+{
+  float grazing = pow(1.0 - abs(normalize(vWetView).y), 3.0);
+  // Wet paint is darker, and the water film adds the sky's colour at a grazing angle.
+  diffuseColor.rgb *= 1.0 - 0.32 * uWetness;
+  diffuseColor.rgb += uSky * grazing * uWetness * 0.55;
+}`
 
 /**
  * The ground plane. Inside the zone it is worn paving and dust, breaking into Nairobi's
@@ -126,9 +159,20 @@ export function createDecalMaterial(): MeshLambertMaterial {
     polygonOffsetUnits: -8,
   })
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uWetness = wetUniforms.uWetness
+    shader.uniforms.uSky = wetUniforms.uSky
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${WET_VERTEX_PARS}`)
+      .replace(
+        '#include <begin_vertex>',
+        /* glsl */ `#include <begin_vertex>
+  vWetView = (modelViewMatrix * vec4(transformed, 1.0)).xyz;`,
+      )
     shader.fragmentShader = catchHeadlights(shader.fragmentShader)
+      .replace('#include <common>', `#include <common>\n${WET_PARS}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n${WET_FRAGMENT}`)
   }
-  material.customProgramCacheKey = () => HEADLIT_KEY
+  material.customProgramCacheKey = () => 'kanairo-wet-decal-v1'
   return material
 }
 
@@ -140,10 +184,21 @@ export function createStructureMaterial(): MeshLambertMaterial {
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -2,
   })
-  // The decks are roads too.
+  // The decks are roads too, and they get rained on as well.
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uWetness = wetUniforms.uWetness
+    shader.uniforms.uSky = wetUniforms.uSky
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${WET_VERTEX_PARS}`)
+      .replace(
+        '#include <begin_vertex>',
+        /* glsl */ `#include <begin_vertex>
+  vWetView = (modelViewMatrix * vec4(transformed, 1.0)).xyz;`,
+      )
     shader.fragmentShader = catchHeadlights(shader.fragmentShader)
+      .replace('#include <common>', `#include <common>\n${WET_PARS}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n${WET_FRAGMENT}`)
   }
-  material.customProgramCacheKey = () => HEADLIT_KEY
+  material.customProgramCacheKey = () => 'kanairo-wet-structure-v1'
   return material
 }

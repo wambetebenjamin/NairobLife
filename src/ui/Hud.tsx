@@ -15,6 +15,7 @@ import { compassPoint, createProjection, formatLatLon, yawToBearingDeg } from '.
 import {
   cycleHaze,
   cycleQuality,
+  cycleWeather,
   openTeleport,
   pauseGame,
   shiftTime,
@@ -33,6 +34,7 @@ import {
   FullscreenIcon,
   MoonIcon,
   PauseIcon,
+  RainIcon,
   SunIcon,
 } from './icons'
 import { getMapImage } from './mapImage'
@@ -62,6 +64,7 @@ export function Hud() {
   const showHud = useGame((state) => state.settings.showHud)
   const showControls = useGame((state) => state.settings.showControls)
   const haze = useGame((state) => state.settings.haze)
+  const weather = useGame((state) => state.settings.weather)
   const touch = useGame((state) => state.touch)
   const pointerLocked = useGame((state) => state.pointerLocked)
   const teleportOpen = useGame((state) => state.teleportOpen)
@@ -97,6 +100,15 @@ export function Hud() {
   if (!sample || !map) return null
 
   const hazeLabel = t(haze === 'clear' ? 'hazeClear' : haze === 'hazy' ? 'hazeHazy' : 'hazeDusty')
+  const weatherLabel = t(
+    weather === 'season'
+      ? 'weatherSeason'
+      : weather === 'long-rains'
+        ? 'weatherLongRains'
+        : weather === 'short-rains'
+          ? 'weatherShortRains'
+          : 'weatherOff',
+  )
 
   return (
     <div className={`hud${showHud ? '' : ' hud--hidden'}`}>
@@ -120,6 +132,12 @@ export function Hud() {
           </ClockStep>
         </div>
         <ToolButton label={hazeLabel} hotkey="L" onClick={cycleHaze} title={t('haze')} />
+        <ToolButton
+          label={<RainIcon />}
+          hotkey="N"
+          onClick={cycleWeather}
+          title={`${t('weather')}: ${weatherLabel}`}
+        />
         <ToolButton label={t('teleport')} hotkey="T" onClick={openTeleport} accent />
         <ToolButton label="Cam" hotkey="V" onClick={toggleCamera} title="Camera" />
         <ToolButton label="GFX" hotkey="G" onClick={cycleQuality} title={t('quality')} />

@@ -85,6 +85,13 @@ export const runtime = {
   /** How dark it is, 0 (day) .. 1 (night). Vehicles switch their lamps on by it. */
   night: 0,
 
+  /**
+   * How hard it is raining, 0..1, and how wet the ground is. Written by the environment
+   * from the weather model; read by the rain field, the road shader and the HUD.
+   */
+  rain: 0,
+  wetness: 0,
+
   /** How far the third-person camera really is from the player right now, in metres. */
   cameraGap: CAMERA.distance as number,
 

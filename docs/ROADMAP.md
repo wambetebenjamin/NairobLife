@@ -49,11 +49,10 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Directed ground-road graph using mapped one-way streets and stored lane counts
 - [x] Ambient cars, matatus and bodas follow the graph; matatus pause near stages.
       Solid approximate boxes, a near-player forward-vehicle probe and same-segment
-      spacing make them interact with players and some other traffic. Shared graph
-      junctions have conservative one-at-a-time reservations; dead-end restarts wait for
-      an unoccupied location away from the player and camera. Motion is still simplified:
-      unconnected crossings, short links and turns can overlap or jam, restarts are not
-      seamless, and elevated roads are not used. This is not a complete traffic simulation.
+      spacing make them interact with players and some other traffic. Dead-end restarts
+      wait for an unoccupied location away from the player and camera. This is still not a
+      complete traffic simulation: restarts are not seamless and elevated roads are not
+      used.
 - [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,
       marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
       is no pursuit, siren or policing gameplay, and State House is outside the map.
@@ -65,14 +64,26 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.
       Pick stages from Teleport; the journey starts at the selected departure stage and
       follows a shortest directed route, not an official route or existing traffic vehicle.
-- [x] Mapped lamps, stage signs and traffic signals. Signals use a simplified two-axis
-      cycle and ambient traffic responds; player vehicles and guided rides are not governed.
+- [x] Mapped lamps, stage signs and traffic signals. Each mapped signal is matched to the
+      junction box it stands on, and that box goes green along one axis while the other
+      waits, with an all-red pause between; ambient traffic obeys it. The cycle is
+      simplified — two axes, fixed timings — and player vehicles and guided rides are not
+      governed.
 - [x] In-world "ADVERTISE HERE" placeholders; no ad booking or contact system
 - [x] Fictional non-partisan campaign rally near City Square, with an animated speaker
       and crowd (silent and non-interactive)
 - [ ] Street-level Sheng flavour reviewed by native speakers: the optional language
       remains a draft until that external review happens.
-- [ ] Full traffic collision avoidance and junction priority, beyond the current prototype.
+- [x] Junction priority at crossing roads. A crossing search finds every place roads meet
+      — shared graph vertices, geometric crossings where two ways share no node, and T
+      joins — and merges meeting points within a few metres into one junction box: about
+      500 boxes and 6,800 conflicting approach pairs in the CBD, found once per zone.
+      Vehicles stop on the line, claim the box only when no conflicting approach holds it,
+      and a vehicle that has crossed its line always clears. A vehicle that has a clear
+      approach still takes its turn in order of how long it has waited. Motion within a
+      box is still simplified: turn paths are not predicted, so the conflicts kept are
+      conservative, and a vehicle turns at the junction's centre rather than tracing a
+      lane. Not a complete traffic simulation.
 
 ## Phase 4: a bigger, better-looking Nairobi
 
@@ -84,7 +95,9 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Hand-made models for the icons: KICC, Parliament's clock tower, Jamia Mosque,
       the National Archives, the Railway Station
 - [ ] Water that looks like water; the Nairobi River
-- [ ] Rain: the long rains and the short rains
+- [x] Rain: the long rains and the short rains, on the real calendar, with overcast
+      skies, wet dark tarmac and a rain field that follows the camera. Settings can force
+      either season or turn it off.
 - [ ] Simpler distant buildings, so far-off districts stay cheap to draw
 - [ ] A rigged character model, with outfits
 

@@ -5,7 +5,7 @@
 **Play it: <https://playkanairo.vercel.app>**
 
 kaNAIRO is an open-world game set in a 3D Nairobi built from real map data. This is
-**Phase 2**: you explore the Central Business District on foot, or at the wheel of a car,
+**Phase 3**: you explore the Central Business District on foot, or at the wheel of a car,
 a boda boda, a 14-seat matatu or a larger nganya. Streets and most building footprints
 come from [OpenStreetMap](https://www.openstreetmap.org), so Kenyatta Avenue is where Kenyatta
 Avenue is, and KICC stands 105 m over City Square.
@@ -32,8 +32,15 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 - **16 teleports** to landmarks, including the KICC helipad.
 - **A day that passes**: 24 real minutes per game day, with dusk, lit windows at night, and
   a haze setting for the dry season.
+- **The rains**: wet-season weather follows the real calendar, so a November visit tends
+  to be wet. Overcast skies, darker wet tarmac that mirrors the sky, and a rain field
+  that follows the camera. It can be forced or turned off in Settings, or cycled with
+  `N`.
 - **Ambient pedestrians** walk on pavements and around City Square. They are visual-only
   and do not interact or collide yet.
+- **Ambient traffic**: cars, matatus and bodas drive the road graph, stop at the line for
+  each other at crossings, obey the mapped signals, and pause at the stages. It is a
+  stylised prototype, not a full simulation; see the roadmap for what is still missing.
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
   real latitude and longitude, a speedometer, and the current real-world Nairobi time.
   The separate game clock controls the day/night cycle.
@@ -41,8 +48,8 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
   the wheel.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
-What is _not_ here yet: traffic, interactive pedestrians, sound, multiplayer. They are planned, in
-that order. See the [roadmap](docs/ROADMAP.md).
+What is _not_ here yet: a full traffic simulation, interactive pedestrians, sound,
+multiplayer. See the [roadmap](docs/ROADMAP.md).
 
 ## Run it
 
@@ -88,6 +95,7 @@ The arrow keys work in place of `W A S D`.
 | `V`         | Third person / first person   |
 | `[` and `]` | Move the clock back / forward |
 | `L`         | Haze: clear, hazy, dusty      |
+| `N`         | Weather: season, rains, dry   |
 | `G`         | Graphics quality              |
 | `H`         | Hide the HUD                  |
 | `K`         | Fullscreen                    |
