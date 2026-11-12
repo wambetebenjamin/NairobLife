@@ -47,3 +47,20 @@ npm test                           # checks the new map still fits the game
 Commit both changed files. A fresh download fixes every limitation listed above. The fetch
 script has not yet been run against the live Overpass API (see `docs/DATA.md`), so read
 its output the first time.
+
+## Westlands research (not shipped)
+
+A candidate public vector-tile archive,
+[optgeo/kokoromi-ke](https://github.com/optgeo/kokoromi-ke/tree/75b64a484147b4d27ca8a2659431e8cbef31b7f1),
+contains OSM-derived roads and buildings around Sarit Centre and Westgate. A sampled tile
+(`15/19733/16498.pbf`) was committed on 6 May 2020; the underlying OSM snapshot date was
+not established. The tiles are quantized and clipped, can duplicate features across tile
+boundaries, and do not expose the original OSM IDs in the sampled layers. They are not a
+verified current, connected street map. The repository's CC0 declaration does not remove
+the ODbL obligations of underlying OSM data. No data from this archive is included here.
+
+For a playable Westlands, obtain a traceable, appropriately licensed current extract;
+check footprint completeness, road connectivity and elevation; bake and test it; and
+implement zone switching and resource/physics cleanup. The current loader and gameplay
+are single-zone. A data file alone will not make a destination visitable. The same work
+is needed for the other requested outlying destinations.

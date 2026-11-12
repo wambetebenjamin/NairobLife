@@ -1,10 +1,10 @@
 /** Step ambient traffic as a batch so junction decisions use the same frame snapshot. */
-import { VEHICLES } from '../../config/vehicles'
 import { orientedRectsOverlap } from '../../core/geom2d'
 import {
   sameEdgeClearance,
   stepTraffic,
   trafficPose,
+  trafficRect,
   type RoadGraph,
   type TrafficAgent,
 } from './graph'
@@ -88,36 +88,16 @@ export class TrafficSimulation {
     const count = this.restartEdges.length
     if (!count) return false
     const start = (agent.seed * 37 + agent.turns * 43) % count
-    const spec = VEHICLES[agent.kind]
     for (let n = 0; n < Math.min(count, 48); n++) {
       const id = this.restartEdges[(start + n) % count],
         edge = this.graph.edges[id],
         progress = edge.length / 2
       const pose = trafficPose(edge, progress)
-      const rect = {
-        x: pose.x,
-        z: pose.z,
-        dx: -Math.sin(pose.yaw),
-        dz: -Math.cos(pose.yaw),
-        halfLength: spec.length / 2,
-        halfWidth: spec.width / 2,
-      }
+      const rect = trafficRect(agent.kind, pose)
       const occupied = this.agents.some((other) => {
         if (other === agent) return false
-        const p = trafficPose(this.graph.edges[other.edge], other.progress),
-          s = VEHICLES[other.kind]
-        return orientedRectsOverlap(
-          rect,
-          {
-            x: p.x,
-            z: p.z,
-            dx: -Math.sin(p.yaw),
-            dz: -Math.cos(p.yaw),
-            halfLength: s.length / 2,
-            halfWidth: s.width / 2,
-          },
-          2,
-        )
+        const p = trafficPose(this.graph.edges[other.edge], other.progress)
+        return orientedRectsOverlap(rect, trafficRect(other.kind, p), 2)
       })
       if (occupied || !canRestart(agent, pose)) continue
       agent.edge = id

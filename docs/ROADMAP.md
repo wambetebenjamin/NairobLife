@@ -50,8 +50,10 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Ambient cars, matatus and bodas follow the graph; matatus pause near stages.
       Solid approximate boxes, a near-player forward-vehicle probe and same-segment
       spacing make them interact with players and some other traffic. Shared graph
-      junctions have conservative one-at-a-time reservations; dead-end restarts wait for
-      an unoccupied location away from the player and camera. Motion is still simplified:
+      junctions have conservative one-at-a-time reservations; initial ambient traffic avoids
+      overlap with other traffic and the player spawn, and dead-end restarts wait for
+      an unoccupied location away from the player and camera. Initial placement does not
+      check parked cars or scenery. Motion is still simplified:
       unconnected crossings, short links and turns can overlap or jam, restarts are not
       seamless, and elevated roads are not used. This is not a complete traffic simulation.
 - [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,

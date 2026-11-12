@@ -1,4 +1,6 @@
 /** Directed ground-level road graph and simple ambient traffic. */
+import { VEHICLES } from '../../config/vehicles'
+import { orientedRectsOverlap, type OrientedRect } from '../../core/geom2d'
 import { hash01 } from '../../core/random'
 import { DRIVABLE, type ZoneFile } from '../../world/zone/format'
 
@@ -102,24 +104,42 @@ export function makeTraffic(
   const rest = long
     .filter((e) => !used.has(e.id))
     .sort((a, b) => hash01(a.id, 54) - hash01(b.id, 54))
-  return [...near, ...rest].slice(0, limit).map(({ edge, id }, seed) => ({
-    edge: id,
-    progress: edge.length * (0.2 + 0.6 * hash01(seed, 5)),
-    speed: 5 + 3 * hash01(seed, 6),
-    kind:
+  const agents: TrafficAgent[] = []
+  const occupied: OrientedRect[] = []
+  for (const { edge, id } of [...near, ...rest]) {
+    if (agents.length >= limit) break
+    // Assign identities only to accepted candidates so patrols still appear if a spot
+    // was rejected. Vary progress by edge id rather than retrying the same location.
+    const seed = agents.length
+    const kind =
       seed === 2 || seed === 5 || seed === 8
         ? 'boda'
         : seed % 7 === 0
           ? 'matatu'
           : seed % 8 === 0
             ? 'boda'
-            : 'car',
-    patrol: seed === 2 || seed === 5 || seed === 8,
-    seed,
-    wait: 0,
-    stopped: false,
-    turns: 0,
-  }))
+            : 'car'
+    const progress = edge.length * (0.2 + 0.6 * hash01(id, 5))
+    const pose = trafficPose(edge, progress)
+    const rect = trafficRect(kind, pose)
+    // Do not materialise a vehicle on the initial player, or on another traffic box.
+    // Parked vehicles and later movement require separate physics checks.
+    if (Math.hypot(pose.x - start.x, pose.z - start.z) < 10 + rect.halfLength) continue
+    if (occupied.some((other) => orientedRectsOverlap(rect, other, 1))) continue
+    agents.push({
+      edge: id,
+      progress,
+      speed: 5 + 3 * hash01(seed, 6),
+      kind,
+      patrol: seed === 2 || seed === 5 || seed === 8,
+      seed,
+      wait: 0,
+      stopped: false,
+      turns: 0,
+    })
+    occupied.push(rect)
+  }
+  return agents
 }
 
 /** Left-hand lane, measured relative to direction of travel. */
@@ -132,6 +152,22 @@ export function trafficPose(edge: Edge, progress: number) {
     x: edge.ax + (edge.bx - edge.ax) * t + dz * offset,
     z: edge.az + (edge.bz - edge.az) * t - dx * offset,
     yaw: Math.atan2(-dx, -dz),
+  }
+}
+
+/** Approximate footprint shared by initial placement and dead-end restarts. */
+export function trafficRect(
+  kind: TrafficAgent['kind'],
+  pose: ReturnType<typeof trafficPose>,
+): OrientedRect {
+  const spec = VEHICLES[kind]
+  return {
+    x: pose.x,
+    z: pose.z,
+    dx: -Math.sin(pose.yaw),
+    dz: -Math.cos(pose.yaw),
+    halfLength: spec.length / 2,
+    halfWidth: spec.width / 2,
   }
 }
 

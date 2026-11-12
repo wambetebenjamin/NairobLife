@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { orientedRectsOverlap } from '../../core/geom2d'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import {
   buildRoadGraph,
@@ -6,6 +7,7 @@ import {
   sameEdgeClearance,
   stepTraffic,
   trafficPose,
+  trafficRect,
   type TrafficAgent,
 } from './graph'
 
@@ -59,6 +61,66 @@ describe('ambient traffic graph', () => {
     expect(car.edge).toBe(1)
     expect(car.progress).toBe(10)
     expect(car.turns).toBe(1)
+  })
+  it('starts traffic clear of other traffic and the player, including crossing streets', () => {
+    for (const g of [graph, buildRoadGraph(fixture)]) {
+      const start = { x: 0, z: 0 }
+      const agents = makeTraffic(g, start)
+      expect(agents.length).toBeGreaterThan(0)
+      const rectangles = agents.map((a) => {
+        const pose = trafficPose(g.edges[a.edge], a.progress)
+        const rect = trafficRect(a.kind, pose)
+        expect(Math.hypot(pose.x - start.x, pose.z - start.z)).toBeGreaterThanOrEqual(
+          10 + rect.halfLength,
+        )
+        return rect
+      })
+      for (let i = 0; i < rectangles.length; i++) {
+        for (let j = i + 1; j < rectangles.length; j++) {
+          expect(orientedRectsOverlap(rectangles[i], rectangles[j], 1)).toBe(false)
+        }
+      }
+    }
+  })
+  it('rejects duplicate and crossing candidate boxes even without a shared graph node', () => {
+    const crossing = buildRoadGraph({
+      ...zone,
+      roads: [
+        ...Array.from({ length: 12 }, () => ({
+          k: 'primary' as const,
+          p: [-15, 0, 15, 0],
+          w: 8,
+          ow: 1 as const,
+        })),
+        { k: 'primary', p: [0, -15, 0, 15], w: 8, ow: 1 },
+      ],
+      pois: [],
+    })
+    const agents = makeTraffic(crossing, { x: 500, z: 500 })
+    expect(agents.length).toBeLessThan(13)
+    for (const [i, a] of agents.entries()) {
+      for (const b of agents.slice(i + 1)) {
+        expect(
+          orientedRectsOverlap(
+            trafficRect(a.kind, trafficPose(crossing.edges[a.edge], a.progress)),
+            trafficRect(b.kind, trafficPose(crossing.edges[b.edge], b.progress)),
+            1,
+          ),
+        ).toBe(false)
+      }
+    }
+  })
+  it('can return fewer cars when every candidate is occupied or too close to the start', () => {
+    const single = buildRoadGraph({
+      ...zone,
+      roads: [{ k: 'primary', p: [0, 0, 30, 0], w: 6, ow: 1 }],
+      pois: [],
+    })
+    const far = makeTraffic(single, { x: 500, z: 500 })
+    expect(far).toHaveLength(1)
+    const pose = trafficPose(single.edges[0], far[0].progress)
+    expect(makeTraffic(single, pose)).toHaveLength(0)
+    expect(makeTraffic(single, { x: 500, z: 500 }, 0)).toHaveLength(0)
   })
   it('adds up to three marked patrol motorcycles to the regular traffic simulation', () => {
     const real = buildRoadGraph(fixture)
