@@ -6,6 +6,7 @@ import { loadWorld } from '../game/loadWorld'
 import { useGame } from '../state/gameStore'
 import { hideBoot, setBootProgress, showBootError, startBootTips } from './bootScreen'
 import { Hud } from './Hud'
+import { RideControls } from './RideControls'
 import { MainMenu } from './MainMenu'
 import { PauseMenu } from './PauseMenu'
 import { SettingsPanel } from './SettingsPanel'
@@ -19,13 +20,15 @@ export function UI() {
   const teleportOpen = useGame((state) => state.teleportOpen)
   const settingsOpen = useGame((state) => state.settingsOpen)
   const touch = useGame((state) => state.touch)
+  const ride = useGame((state) => state.ride)
 
   return (
     <div className={`ui${touch ? ' ui--touch' : ''}`}>
       <BootDriver />
       {phase === 'menu' && <MainMenu />}
       {phase === 'playing' && <Hud />}
-      {phase === 'playing' && touch && !teleportOpen && <TouchControls />}
+      {phase === 'playing' && ride && <RideControls />}
+      {phase === 'playing' && touch && !teleportOpen && !ride && <TouchControls />}
       {phase === 'paused' && <PauseMenu />}
       {teleportOpen && <TeleportMenu />}
       {settingsOpen && <SettingsPanel />}

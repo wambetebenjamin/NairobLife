@@ -1,5 +1,8 @@
-/** Simple, non-interactive signs and lights at mapped points of interest. */
+/** Mapped signs and simple two-axis signal lights. */
 import { useEffect, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { runtime } from '../../state/runtime'
+import { greenAxis } from '../../core/trafficSignals'
 import { CanvasTexture, MeshBasicMaterial, SRGBColorSpace } from 'three'
 import type { LoadedZone } from '../zone/loadZone'
 
@@ -29,6 +32,23 @@ export function StreetFurniture({ zone }: { zone: LoadedZone }) {
     return t
   }, [])
   const sign = useMemo(() => new MeshBasicMaterial({ map: texture }), [texture])
+  const lights = useMemo(
+    () => ({
+      xr: new MeshBasicMaterial(),
+      xg: new MeshBasicMaterial(),
+      zr: new MeshBasicMaterial(),
+      zg: new MeshBasicMaterial(),
+    }),
+    [],
+  )
+  useFrame(() => {
+    const axis = greenAxis(runtime.trafficTime)
+    lights.xr.color.set(axis === 'x' ? '#3d1010' : '#ff3333')
+    lights.xg.color.set(axis === 'x' ? '#38d979' : '#103324')
+    lights.zr.color.set(axis === 'z' ? '#3d1010' : '#ff3333')
+    lights.zg.color.set(axis === 'z' ? '#38d979' : '#103324')
+  })
+  useEffect(() => () => Object.values(lights).forEach((light) => light.dispose()), [lights])
   useEffect(
     () => () => {
       texture.dispose()
@@ -55,9 +75,17 @@ export function StreetFurniture({ zone }: { zone: LoadedZone }) {
                 <boxGeometry args={[0.35, 0.95, 0.28]} />
                 <meshLambertMaterial color="#252525" />
               </mesh>
-              <mesh position={[0, 2.93, 0.15]}>
+              <mesh position={[0, 3.45, 0.15]} material={lights.zr}>
                 <sphereGeometry args={[0.1, 6, 4]} />
-                <meshBasicMaterial color="#38d979" />
+              </mesh>
+              <mesh position={[0, 2.93, 0.15]} material={lights.zg}>
+                <sphereGeometry args={[0.1, 6, 4]} />
+              </mesh>
+              <mesh position={[0.18, 3.45, 0]} material={lights.xr}>
+                <sphereGeometry args={[0.1, 6, 4]} />
+              </mesh>
+              <mesh position={[0.18, 2.93, 0]} material={lights.xg}>
+                <sphereGeometry args={[0.1, 6, 4]} />
               </mesh>
             </>
           )}

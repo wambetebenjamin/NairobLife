@@ -157,7 +157,7 @@ export function Vehicles({ placements }: { placements: Placement[] }) {
       const game = useGame.getState()
       const p = runtime.player
       const near =
-        runtime.driving < 0 && game.phase === 'playing'
+        runtime.driving < 0 && !runtime.ride && game.phase === 'playing'
           ? fleet.nearest(p.x, p.y, p.z, DRIVING.reach)
           : undefined
       const id = near ? near.id : -1

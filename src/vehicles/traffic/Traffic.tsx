@@ -1,5 +1,7 @@
-/** Background traffic follows the mapped road graph. It is decorative, not collidable. */
+/** Background traffic follows the mapped road graph with approximate solid boxes. */
 import { useFrame } from '@react-three/fiber'
+import { useBeforePhysicsStep, useRapier } from '@react-three/rapier'
+import type { Collider } from '@dimforge/rapier3d-compat'
 import { useEffect, useMemo, useRef } from 'react'
 import {
   BufferGeometry,
@@ -18,16 +20,21 @@ import type { LoadedZone } from '../../world/zone/loadZone'
 import { buildVehicleModel, buildWheelGeometry } from '../models/vehicleModels'
 import { createVehicleMaterial, createWheelMaterial } from '../view/vehicleMaterials'
 import { buildRoadGraph, makeTraffic, sameEdgeClearance, stepTraffic, trafficPose } from './graph'
+import { signalClearance, signalNodes } from './signals'
+import { createTrafficCollider, placeTrafficCollider, vehicleAhead } from './colliders'
 
 const KINDS = ['car', 'matatu', 'boda'] as const
 const RANGE = { low: 120, medium: 180, high: 240 }
 
 export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number; z: number } }) {
   const quality = useQuality()
+  const { world, rapier } = useRapier()
+  const colliders = useRef<Collider[]>([])
   const group = useRef<import('three').Group>(null)
   const scene = useMemo(() => {
     const graph = buildRoadGraph(zone.file)
     const agents = makeTraffic(graph, start)
+    const signals = signalNodes(zone.file, graph)
     const material = createVehicleMaterial(),
       wheelMaterial = createWheelMaterial(),
       wheel = buildWheelGeometry()
@@ -54,7 +61,7 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
     const wheels = new InstancedMesh(wheel, wheelMaterial, agents.length * 4)
     wheels.count = 0
     wheels.frustumCulled = false
-    return { graph, agents, material, wheelMaterial, wheel, bodies, wheels }
+    return { graph, agents, signals, material, wheelMaterial, wheel, bodies, wheels }
   }, [zone, start])
   useEffect(() => {
     const root = group.current
@@ -74,6 +81,31 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
       scene.wheelMaterial.dispose()
     }
   }, [scene])
+  useEffect(() => {
+    colliders.current = scene.agents.map((agent) =>
+      createTrafficCollider(
+        world,
+        rapier,
+        agent,
+        trafficPose(scene.graph.edges[agent.edge], agent.progress),
+      ),
+    )
+    return () => {
+      for (const collider of colliders.current) world.removeCollider(collider, true)
+      colliders.current = []
+    }
+  }, [scene, world, rapier])
+  useBeforePhysicsStep(() => {
+    scene.agents.forEach((agent, i) => {
+      const collider = colliders.current[i]
+      if (collider)
+        placeTrafficCollider(
+          collider,
+          agent,
+          trafficPose(scene.graph.edges[agent.edge], agent.progress),
+        )
+    })
+  })
   const tools = useMemo(
     () => ({
       matrix: new Matrix4(),
@@ -89,22 +121,31 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
   )
   useFrame(({ camera }, delta) => {
     const playing = useGame.getState().phase === 'playing'
+    if (playing) runtime.trafficTime += Math.min(delta, 0.05)
     const counts = [0, 0, 0]
     let wheelCount = 0
     const { matrix, local, root, position, scale, rotation, euler, color } = tools
-    for (const agent of scene.agents) {
+    for (const [agentIndex, agent] of scene.agents.entries()) {
       let edge = scene.graph.edges[agent.edge]
       let pose = trafficPose(edge, agent.progress)
       const player = runtime.player
       const dx = player.x - pose.x,
         dz = player.z - pose.z
-      // Slow/stop near the player; ambient traffic has no collision or player boarding yet.
-      const blocked = Math.hypot(dx, dz) < 7
+      // Near the player, sense other vehicle boxes ahead. Traffic remains a simple
+      // graph simulation rather than a physics-driven AI, especially at junctions.
+      const collider = colliders.current[agentIndex]
+      const nearby = Math.hypot(dx, dz) < 180
+      const blocked =
+        Math.hypot(dx, dz) < 7 ||
+        !!(nearby && collider && vehicleAhead(world, rapier, collider, agent, pose))
       if (playing) {
         const dt = Math.min(delta, 0.05)
-        const clearance = sameEdgeClearance(agent, scene.agents)
-        // Keep a gap to a vehicle ahead on this segment. Crossings and other segments
-        // are not collision-aware yet.
+        const clearance = Math.min(
+          sameEdgeClearance(agent, scene.agents),
+          signalClearance(agent, edge, scene.signals, runtime.trafficTime),
+        )
+        // Same-segment headway and mapped red signals. Other segments and
+        // uncontrolled junctions are not collision-aware yet.
         const limited = Math.min(dt, clearance / agent.speed)
         if (limited > 0) stepTraffic(agent, scene.graph, limited, blocked)
         else if (agent.wait > 0) stepTraffic(agent, scene.graph, dt, true)

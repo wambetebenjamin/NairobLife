@@ -135,6 +135,10 @@ export function PlayerModel() {
     const dt = Math.min(delta, 0.05)
     if (!root.current || !hips.current || !torso.current) return
 
+    if (runtime.ride) {
+      root.current.visible = false
+      return
+    }
     // ---- where the figure is: on its feet, on a saddle, or out of sight inside a cabin
     const vehicle = runtime.driving >= 0 ? runtime.vehicle : null
     const seat = vehicle && VEHICLES[vehicle.kind].openSeat ? VEHICLES[vehicle.kind].seat : null

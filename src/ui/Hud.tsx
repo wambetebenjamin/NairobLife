@@ -66,6 +66,7 @@ export function Hud() {
   const pointerLocked = useGame((state) => state.pointerLocked)
   const teleportOpen = useGame((state) => state.teleportOpen)
   const driving = useGame((state) => state.driving)
+  const ride = useGame((state) => state.ride)
   const nearVehicle = useGame((state) => state.nearVehicle)
   const map = useMemo(() => (zone ? getMapImage(zone.file) : null), [zone])
 
@@ -131,7 +132,7 @@ export function Hud() {
         <ToolButton label={<PauseIcon />} hotkey="Esc" onClick={pauseGame} title="Pause" />
       </div>
 
-      {!touch && !pointerLocked && !teleportOpen && (
+      {!touch && !pointerLocked && !teleportOpen && !ride && (
         <div className="hud__click">{t('clickToPlay')}</div>
       )}
 
@@ -144,7 +145,7 @@ export function Hud() {
       </div>
 
       {/* On touch screens the same offer is a button under the thumb (TouchControls). */}
-      {nearVehicle && !driving && !touch && (
+      {nearVehicle && !driving && !ride && !touch && (
         <div className="hud__prompt">
           <kbd>F</kbd>
           <span>{t(nearVehicle.kind === 'boda' ? 'ride' : 'drive')}</span>
@@ -187,7 +188,7 @@ export function Hud() {
         </div>
       </div>
 
-      {showControls && !touch && (
+      {showControls && !touch && !ride && (
         <div className="hud__hints">
           <ControlsCard compact driving={!!driving} />
         </div>

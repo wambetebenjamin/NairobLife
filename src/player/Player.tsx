@@ -133,6 +133,12 @@ export function Player({ start }: { start: TeleportRequest }) {
       return
     }
 
+    // A guided shuttle is cinematic: keep the physical capsule at the boarding location.
+    if (runtime.ride) {
+      sim.vx = sim.vy = sim.vz = 0
+      return
+    }
+
     // ------------------------------------------------------------- at the wheel
     if (runtime.driving >= 0) {
       if (sim.crouching) {
@@ -282,7 +288,7 @@ export function Player({ start }: { start: TeleportRequest }) {
   useFrame((_, delta) => {
     // At the wheel the fleet reports where the player is. And with a teleport waiting,
     // the capsule is about to be somewhere else: do not report where it was.
-    if (runtime.driving >= 0 || runtime.teleport) return
+    if (runtime.driving >= 0 || runtime.teleport || runtime.ride) return
     const p = runtime.player
     if (visual.current) {
       visual.current.getWorldPosition(position)

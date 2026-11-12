@@ -40,7 +40,12 @@ export function TouchControls() {
   }
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId)
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // The browser may have already ended a synthetic or cancelled pointer.
+      return
+    }
     const leftSide = event.clientX < window.innerWidth * 0.42
     if (leftSide && !stick.current) {
       stick.current = { id: event.pointerId, x: event.clientX, y: event.clientY }

@@ -12,6 +12,7 @@ import { attachPointer } from '../input/pointer'
 import { resolveLandmark } from '../player/teleport'
 import { HAZE_ORDER, QUALITY_ORDER, cycle, useGame } from '../state/gameStore'
 import { runtime } from '../state/runtime'
+import type { RideRoute } from '../vehicles/ride/routes'
 
 let canvas: HTMLCanvasElement | null = null
 let welcomed = false
@@ -69,24 +70,25 @@ export function pauseGame(): void {
 export function resumeGame(): void {
   if (game().phase !== 'paused') return
   game().setPhase('playing')
-  lockPointer()
+  if (!runtime.ride) lockPointer()
 }
 
 export function quitToMenu(): void {
+  if (runtime.ride) finishRide(false)
   curtain(90)
   game().setPhase('menu')
   unlockPointer()
 }
 
 export function openTeleport(): void {
-  if (game().phase !== 'playing') return
+  if (game().phase !== 'playing' || runtime.ride) return
   game().setTeleportOpen(true)
   unlockPointer()
 }
 
 export function closeTeleport(): void {
   game().setTeleportOpen(false)
-  if (game().phase === 'playing') lockPointer()
+  if (game().phase === 'playing' && !runtime.ride) lockPointer()
 }
 
 export function teleportTo(landmark: Landmark): void {
@@ -102,6 +104,42 @@ export function teleportTo(landmark: Landmark): void {
 export function teleportToId(id: string): void {
   const landmark = getLandmark(id)
   if (landmark) teleportTo(landmark)
+}
+
+/** Ride an imaginary shuttle between mapped stages, over the one-way road graph. */
+export function beginRide(route: RideRoute): void {
+  const zone = game().zone
+  if (!zone || runtime.ride || runtime.driving >= 0) {
+    game().toast('Leave your vehicle before taking a matatu ride.')
+    return
+  }
+  const p = runtime.player
+  const [x, z] = zone.index.safeSpawn(route.to.x, route.to.z)
+  runtime.ride = {
+    route,
+    distance: 0,
+    // Compress a real street journey into a watchable 18–45 second tour.
+    speed: route.length / Math.max(18, Math.min(45, route.length / 22)),
+    origin: { x: p.x, y: p.y, z: p.z, yaw: runtime.camera.yaw, onTop: false },
+    destination: { x, z, yaw: runtime.camera.yaw, onTop: false },
+  }
+  game().setRide({ from: route.from.name, to: route.to.name })
+  if (game().phase === 'paused') game().setPhase('playing')
+  closeTeleport()
+  unlockPointer()
+  input.reset()
+  curtain(180)
+}
+
+/** Arrive now, or cancel and return to where the ride was requested. */
+export function finishRide(arrive: boolean): void {
+  const ride = runtime.ride
+  if (!ride) return
+  runtime.teleport = arrive ? ride.destination : ride.origin
+  runtime.ride = null
+  game().setRide(null)
+  input.reset()
+  curtain(220, () => game().toast(arrive ? `Arrived: ${ride.route.to.name}` : 'Ride cancelled'))
 }
 
 // ------------------------------------------------------------------ quick settings
@@ -149,7 +187,7 @@ export function resetTime(): void {
  * on its next physics step (vehicles/driving.ts); this only passes on the request.
  */
 export function enterOrExitVehicle(): void {
-  if (game().phase === 'playing') runtime.enterExit = true
+  if (game().phase === 'playing' && !runtime.ride) runtime.enterExit = true
 }
 
 export function toggleFullscreen(): void {
@@ -160,7 +198,7 @@ export function toggleFullscreen(): void {
 // ------------------------------------------------------------------ wiring
 
 function onTap(action: TapAction): void {
-  if (game().phase !== 'playing') return
+  if (game().phase !== 'playing' || runtime.ride) return
   if (game().teleportOpen) {
     if (action === 'teleport') closeTeleport()
     return
@@ -214,17 +252,25 @@ export function attachGame(element: HTMLCanvasElement): () => void {
       const state = game()
       state.setPointerLocked(locked)
       // Losing the lock while playing means the player pressed Esc (or left the window).
-      if (!locked && state.phase === 'playing' && !state.teleportOpen && !state.touch) pauseGame()
+      if (
+        !locked &&
+        state.phase === 'playing' &&
+        !state.teleportOpen &&
+        !state.touch &&
+        !state.ride
+      )
+        pauseGame()
     },
     onCanvasClick() {
-      if (game().phase === 'playing' && !game().teleportOpen) lockPointer()
+      if (game().phase === 'playing' && !game().teleportOpen && !runtime.ride) lockPointer()
     },
   })
   const offTap = input.onTap(onTap)
   window.addEventListener('keydown', onEscape)
 
   // Gameplay input counts only while actually playing with no menu on top.
-  const sync = () => input.setEnabled(game().phase === 'playing' && !game().teleportOpen)
+  const sync = () =>
+    input.setEnabled(game().phase === 'playing' && !game().teleportOpen && !runtime.ride)
   sync()
   const unsubscribe = useGame.subscribe(sync)
 

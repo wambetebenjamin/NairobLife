@@ -9,6 +9,7 @@
  */
 import { CAMERA, TIME } from '../config/game'
 import type { VehicleKind } from '../config/vehicles'
+import type { RideRoute } from '../vehicles/ride/routes'
 
 export const runtime = {
   /**
@@ -66,8 +67,20 @@ export const runtime = {
     airborne: false,
   },
 
+  /** A guided stage-to-stage trip. The player's capsule waits at the original position. */
+  ride: null as null | {
+    route: RideRoute
+    distance: number
+    speed: number
+    origin: TeleportRequest
+    destination: TeleportRequest
+  },
+
   /** F was pressed: get into the nearest vehicle, or out of this one. Consumed by the fleet. */
   enterExit: false,
+
+  /** Elapsed simulation seconds for traffic signal cycles; pauses with the game. */
+  trafficTime: 0,
 
   /** How dark it is, 0 (day) .. 1 (night). Vehicles switch their lamps on by it. */
   night: 0,

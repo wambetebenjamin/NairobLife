@@ -46,21 +46,25 @@ Phase 3 is in progress. Later phases are plans, not promises.
 
 ## Phase 3: a living city
 
-- [x] Ambient walking pedestrians on clear pavements and City Square (visual only), with
-      extra pavement crowd candidates near mapped stages
-- [x] A ground-level directed graph from baked streets, retaining one-way and lane data
-- [x] Prototype ambient cars, matatus and bodas following the graph; matatus pause near
-      mapped stages. Traffic is non-colliding, can overlap, respawns at dead ends, and
-      keeps a gap to traffic ahead on the same segment, but does not obey signals or
-      carry passengers yet. Junction priority is not simulated and elevated roads are excluded.
-- [x] Decorative mapped street lamps, traffic lights and stage signs (signals are static)
+- [x] Directed ground-road graph using mapped one-way streets and stored lane counts
+- [x] Ambient cars, matatus and bodas follow the graph; matatus pause near stages.
+      Solid approximate boxes, a near-player forward-vehicle probe and same-segment
+      spacing make them interact with players and some other traffic. They still use
+      simplified motion, can overlap at junctions, respawn at dead ends, and do not use
+      elevated roads. They are not a complete traffic simulation.
+- [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
+      Market; short walking paths include pauses. People are visual-only, not AI agents.
+- [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.
+      Pick stages from Teleport; the journey starts at the selected departure stage and
+      follows a shortest directed route, not an official route or existing traffic vehicle.
+- [x] Mapped lamps, stage signs and traffic signals. Signals use a simplified two-axis
+      cycle and ambient traffic responds; player vehicles and guided rides are not governed.
 - [x] In-world "ADVERTISE HERE" placeholders; no ad booking or contact system
-- [x] A fictional, non-partisan campaign rally near City Square, with an animated speaker
-      and crowd (a silent, non-interactive scene, not a real election event)
-- [ ] More natural pedestrian movement and denser crowds near markets and stages
-- [ ] Matatu routes you can ride, as fast travel with a view
-- [ ] Interactive traffic rules and collision-aware vehicles
-- [ ] Street-level flavour in Sheng, reviewed by native speakers
+- [x] Fictional non-partisan campaign rally near City Square, with an animated speaker
+      and crowd (silent and non-interactive)
+- [ ] Street-level Sheng flavour reviewed by native speakers: the optional language
+      remains a draft until that external review happens.
+- [ ] Full traffic collision avoidance and junction priority, beyond the current prototype.
 
 ## Phase 4: a bigger, better-looking Nairobi
 

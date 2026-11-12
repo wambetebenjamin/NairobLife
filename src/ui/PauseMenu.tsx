@@ -7,6 +7,7 @@ export function PauseMenu() {
   const t = useT()
   const openSettings = useGame((state) => state.setSettingsOpen)
   const openTeleport = useGame((state) => state.setTeleportOpen)
+  const ride = useGame((state) => state.ride)
 
   return (
     <div className="overlay">
@@ -16,9 +17,11 @@ export function PauseMenu() {
           <button className="button button--primary" onClick={resumeGame} autoFocus>
             {t('resume')}
           </button>
-          <button className="button" onClick={() => openTeleport(true)}>
-            {t('teleport')}
-          </button>
+          {!ride && (
+            <button className="button" onClick={() => openTeleport(true)}>
+              {t('teleport')}
+            </button>
+          )}
           <button className="button" onClick={() => openSettings(true)}>
             {t('settings')}
           </button>

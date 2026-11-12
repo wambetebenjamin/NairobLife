@@ -18,7 +18,7 @@ import { NeutralToneMapping } from 'three'
 import { CAMERA, PLAYER, START_LANDMARK } from './config/game'
 import { getLandmark } from './config/landmarks'
 import { translate } from './config/strings'
-import { attachGame } from './game/actions'
+import { attachGame, finishRide } from './game/actions'
 import { CameraRig } from './player/CameraRig'
 import { Player } from './player/Player'
 import { resolveLandmark } from './player/teleport'
@@ -27,6 +27,7 @@ import { useGame, useQuality, type Quality } from './state/gameStore'
 import { runtime, type TeleportRequest } from './state/runtime'
 import { Vehicles } from './vehicles/Vehicles'
 import { Traffic } from './vehicles/traffic/Traffic'
+import { Ride } from './vehicles/ride/Ride'
 import { planFleet } from './vehicles/placement'
 import { BOUNDARY_INSET } from './world/Boundary'
 import { Campaign } from './world/campaign/Campaign'
@@ -108,6 +109,7 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           <Traffic zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />
+          <Ride onArrival={() => finishRide(true)} />
           <ReadySignal />
         </Physics>
       </Suspense>

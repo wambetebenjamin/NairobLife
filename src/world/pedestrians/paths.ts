@@ -16,6 +16,8 @@ export interface WalkingPath {
   speed: number
   phase: number
   seed: number
+  /** Idle briefly at the end of a walking segment. */
+  pause?: number
 }
 
 /** Build a bounded crowd, distributed across the city, with clear paths near the start. */
@@ -57,6 +59,9 @@ export function planPedestrians(
     })
     return !blocked
   }
+  const hotspots = crowdHotspots(zone)
+  const nearHotspot = (x: number, z: number) =>
+    hotspots.some((h) => Math.hypot(h.x - x, h.z - z) < 90)
   const candidates: WalkingPath[] = []
   let seed = 0
   for (const road of zone.roads) {
@@ -71,7 +76,8 @@ export function planPedestrians(
       if (length < 12) continue
       const ux = dx / length,
         uz = dz / length
-      const count = Math.max(1, Math.floor((length - 4) / 22))
+      const busy = nearHotspot((ax + road.p[i + 2] / zone.q) / 2, (az + road.p[i + 3] / zone.q) / 2)
+      const count = Math.max(1, Math.floor((length - 4) / (busy ? 11 : 22)))
       for (let j = 0; j < count; j++)
         for (const side of [-1, 1]) {
           const id = seed++
@@ -89,6 +95,7 @@ export function planPedestrians(
             speed: 0.85 + hash01(id, 3) * 0.55,
             phase: hash01(id, 4),
             seed: id,
+            pause: 0.4 + hash01(id, 9) * 1.6,
           }
           let valid = true
           for (let n = 0; n <= 8; n++) {
@@ -124,6 +131,7 @@ export function planPedestrians(
           speed: 0.9 + hash01(id, 3) * 0.4,
           phase: hash01(id, 4),
           seed: id,
+          pause: 0.4 + hash01(id, 9) * 1.6,
         }
         if (
           Array.from({ length: 9 }, (_, n) => n / 8).every((t) =>
@@ -141,27 +149,59 @@ export function planPedestrians(
     .sort((a, b) => distance(a) - distance(b))
     .slice(0, 24)
   const used = new Set(nearby)
-  const stages = zone.pois.filter((poi) => poi.k === 'stage')
-  const score = (p: WalkingPath) => {
-    const x = (p.ax + p.bx) / 2,
-      z = (p.az + p.bz) / 2
-    const nearStage = stages.some((poi) => Math.hypot(poi.x / zone.q - x, poi.z / zone.q - z) < 65)
-    return hash01(p.seed, 77) / (nearStage ? 2.5 : 1)
-  }
+  const midpoint = (p: WalkingPath) => ({ x: (p.ax + p.bx) / 2, z: (p.az + p.bz) / 2 })
+  const busy = candidates
+    .filter((p) => !used.has(p) && nearHotspot(midpoint(p).x, midpoint(p).z))
+    .sort((a, b) => hash01(a.seed, 75) - hash01(b.seed, 75))
+    .slice(0, 80)
+  busy.forEach((p) => used.add(p))
+  const score = (p: WalkingPath) =>
+    hash01(p.seed, 77) / (nearHotspot(midpoint(p).x, midpoint(p).z) ? 2.5 : 1)
   const remainder = candidates.filter((p) => !used.has(p)).sort((a, b) => score(a) - score(b))
-  return [...plaza, ...nearby, ...remainder].slice(0, Math.max(0, limit))
+  return [...plaza, ...nearby, ...busy, ...remainder].slice(0, Math.max(0, limit))
 }
 
-/** Ping-pong along a path, returning position and direction. */
+/** Mapped stage points and named market areas used to bias the pavement crowd. */
+export function crowdHotspots(zone: ZoneFile): { x: number; z: number }[] {
+  const points = zone.pois
+    .filter((p) => p.k === 'stage')
+    .map((p) => ({ x: p.x / zone.q, z: p.z / zone.q }))
+  for (const place of zone.places) {
+    if (!/market/i.test(place.n) || place.p.length < 6) continue
+    let x = 0,
+      z = 0
+    for (let i = 0; i < place.p.length; i += 2) {
+      x += place.p[i] / zone.q
+      z += place.p[i + 1] / zone.q
+    }
+    const n = place.p.length / 2
+    points.push({ x: x / n, z: z / n })
+  }
+  return points
+}
+
+/** Walk back and forth with brief, seeded pauses at the ends of a pavement route. */
 export function pedestrianPose(path: WalkingPath, seconds: number) {
-  const cycle = (((path.phase + (seconds * path.speed) / (2 * path.length)) % 1) + 1) % 1
-  const forward = cycle < 0.5
-  const t = forward ? cycle * 2 : 2 - cycle * 2
+  const travel = path.length / path.speed,
+    pause = path.pause ?? 0
+  const period = 2 * (travel + pause)
+  const time = (((path.phase * period + seconds) % period) + period) % period
+  const forward = time < travel + pause
+  const walking = time < travel || (time >= travel + pause && time < 2 * travel + pause)
+  const t =
+    time < travel
+      ? time / travel
+      : time < travel + pause
+        ? 1
+        : time < 2 * travel + pause
+          ? 1 - (time - travel - pause) / travel
+          : 0
   const dx = path.bx - path.ax,
     dz = path.bz - path.az
   return {
     x: path.ax + dx * t,
     z: path.az + dz * t,
     yaw: Math.atan2(-dx, -dz) + (forward ? 0 : Math.PI),
+    walking,
   }
 }

@@ -78,6 +78,8 @@ interface GameState {
   driving: VehicleTag | null
   /** A vehicle close enough to get into, for the "press F" prompt. */
   nearVehicle: VehicleTag | null
+  /** UI label for an in-progress guided ride. */
+  ride: { from: string; to: string } | null
   /** Load progress, 0..1, and what is being loaded, for the loading screen. */
   progress: { value: number; label: string }
   toasts: Toast[]
@@ -98,6 +100,7 @@ interface GameState {
   setCurtain: (on: boolean) => void
   setDriving: (vehicle: VehicleTag | null) => void
   setNearVehicle: (vehicle: VehicleTag | null) => void
+  setRide: (ride: { from: string; to: string } | null) => void
   setProgress: (value: number, label: string) => void
   updateSettings: (patch: Partial<Settings>) => void
   setAutoQuality: (quality: Exclude<Quality, 'auto'>) => void
@@ -130,6 +133,7 @@ export const useGame = create<GameState>()(
       curtain: false,
       driving: null,
       nearVehicle: null,
+      ride: null,
       progress: { value: 0, label: '' },
       toasts: [],
       autoQuality: guessQuality(),
@@ -154,6 +158,7 @@ export const useGame = create<GameState>()(
       setCurtain: (curtain) => set({ curtain }),
       setDriving: (driving) => set({ driving, nearVehicle: null }),
       setNearVehicle: (nearVehicle) => set({ nearVehicle }),
+      setRide: (ride) => set({ ride, nearVehicle: null }),
       setProgress: (value, label) => set({ progress: { value, label } }),
       updateSettings: (patch) => set((state) => ({ settings: { ...state.settings, ...patch } })),
       setAutoQuality: (autoQuality) => set({ autoQuality }),

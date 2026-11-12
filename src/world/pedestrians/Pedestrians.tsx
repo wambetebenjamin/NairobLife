@@ -79,7 +79,7 @@ export function Pedestrians({
       const p = pedestrianPose(path, elapsed.current)
       if ((p.x - camera.position.x) ** 2 + (p.z - camera.position.z) ** 2 > RANGES[quality] ** 2)
         continue
-      const sway = Math.sin(elapsed.current * 5.3 + path.phase * 6.28) * 0.48
+      const sway = p.walking ? Math.sin(elapsed.current * 5.3 + path.phase * 6.28) * 0.48 : 0
       root.compose(
         pos.set(p.x, 0, p.z),
         rotation.setFromEuler(euler.set(0, p.yaw, 0)),

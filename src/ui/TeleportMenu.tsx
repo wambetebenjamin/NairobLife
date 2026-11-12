@@ -2,13 +2,14 @@
  * Teleport: pick a landmark from the list or from the map.
  *
  * TODO(map): street search and a walking route line, like a sat-nav.
- * TODO(matatus): once routes run, show stages here and let the player ride instead.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LANDMARKS, type Landmark } from '../config/landmarks'
 import { WORLD_ORIGIN, ZONES } from '../config/zones'
 import { createProjection } from '../core/geo'
-import { closeTeleport, teleportTo } from '../game/actions'
+import { beginRide, closeTeleport, teleportTo } from '../game/actions'
+import { buildRideNetwork, planRide } from '../vehicles/ride/routes'
+import type { LoadedZone } from '../world/zone/loadZone'
 import { useGame } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import { CloseIcon, NorthIcon } from './icons'
@@ -63,6 +64,7 @@ export function TeleportMenu() {
 
         <div className="teleport">
           <div className="teleport__list">
+            <RidePlanner zone={zone} />
             {GROUPS.map((group) => (
               <section key={group}>
                 <h3>{group}</h3>
@@ -120,5 +122,83 @@ export function TeleportMenu() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Choose any two mapped stages. The route is simulated, not an official service. */
+function RidePlanner({ zone }: { zone: LoadedZone }) {
+  const network = useMemo(() => buildRideNetwork(zone.file), [zone])
+  const driving = useGame((state) => state.driving)
+  const [fromId, setFromId] = useState(
+    () =>
+      [...network.stops].sort(
+        (a, b) =>
+          Math.hypot(a.x - runtime.player.x, a.z - runtime.player.z) -
+          Math.hypot(b.x - runtime.player.x, b.z - runtime.player.z),
+      )[0]?.id ?? '',
+  )
+  const [toId, setToId] = useState(
+    () =>
+      network.stops.find((s) => s.id !== fromId && s.name === 'Koja')?.id ??
+      network.stops.find((s) => s.id !== fromId)?.id ??
+      '',
+  )
+  const from = network.stops.find((s) => s.id === fromId)
+  const to = network.stops.find((s) => s.id === toId)
+  const route = useMemo(
+    () => (from && to ? planRide(network.graph, from, to) : null),
+    [network, from, to],
+  )
+  if (network.stops.length < 2) return null
+  return (
+    <section className="ride-planner">
+      <h3>Matatu city ride</h3>
+      <p>
+        A fictional shuttle between mapped stages. The view starts at your chosen departure stage;
+        this is not an official route.
+      </p>
+      <label>
+        From{' '}
+        <select
+          aria-label="Departure stage"
+          value={fromId}
+          onChange={(e) => setFromId(e.target.value)}
+        >
+          {network.stops.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        To{' '}
+        <select
+          aria-label="Destination stage"
+          value={toId}
+          onChange={(e) => setToId(e.target.value)}
+        >
+          {network.stops.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {driving ? (
+        <p>Get out of your vehicle before boarding.</p>
+      ) : !route ? (
+        <p>No directed street route between these stages. Choose another.</p>
+      ) : (
+        <p>{(route.length / 1000).toFixed(1)} km of mapped streets · scenic fast travel</p>
+      )}
+      <button
+        className="button button--primary ride-planner__go"
+        disabled={!route || !!driving}
+        onClick={() => route && beginRide(route)}
+      >
+        Take the matatu
+      </button>
+    </section>
   )
 }
