@@ -57,9 +57,10 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,
       marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
       is no pursuit, siren or policing gameplay, and State House is outside the map.
-- [x] Separate looping 3D scenic previews inspired by Nairobi National Park and SGR,
-      accessible from Teleport. These are stylised fictional dioramas, not real mapped
-      routes, wildlife simulation, railway service or walkable destinations.
+- [x] Separate guided 3D scenic tours inspired by Nairobi National Park and SGR,
+      accessible from Teleport, with follow/overview cameras, pause and restart. These
+      are stylised fictional dioramas, not real mapped routes, wildlife simulation,
+      railway service or walkable destinations.
 - [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
       Market; short walking paths include pauses. People are visual-only, not AI agents.
 - [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.

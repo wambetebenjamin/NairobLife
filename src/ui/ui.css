@@ -1322,3 +1322,31 @@ kbd {
   flex-wrap: wrap;
   gap: 8px;
 }
+.scenic__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.scenic__progress progress {
+  flex: 1;
+  height: 7px;
+  accent-color: var(--accent);
+}
+.scenic__nav button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (max-height: 500px) {
+  .scenic {
+    gap: 5px;
+  }
+  .scenic__header h2 {
+    font-size: 16px;
+  }
+  .scenic__nav .button,
+  .scenic__header .button {
+    padding: 6px 10px;
+  }
+}

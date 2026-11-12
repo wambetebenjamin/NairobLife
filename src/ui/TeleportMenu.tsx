@@ -15,7 +15,8 @@ import { runtime } from '../state/runtime'
 import { CloseIcon, NorthIcon } from './icons'
 import { getMapImage } from './mapImage'
 import { useT } from './useT'
-import { ScenicPreview, type ScenicKind } from './ScenicPreview'
+import { ScenicPreview } from './ScenicPreview'
+import type { ScenicKind } from './scenicMotion'
 
 const projection = createProjection(WORLD_ORIGIN)
 const GROUPS: Landmark['group'][] = ['Downtown', 'Parks & campus', 'Up high']
@@ -73,8 +74,8 @@ export function TeleportMenu() {
           <div className="teleport__list">
             <RidePlanner zone={zone} />
             <section className="ride-planner">
-              <h3>Scenic previews</h3>
-              <p>Explore fictional 3D previews while the wider city is being built.</p>
+              <h3>Scenic tours</h3>
+              <p>Take a fictional guided ride while the wider city is being built.</p>
               <button
                 className="button scenic-launch"
                 onClick={(e) => {
@@ -82,7 +83,7 @@ export function TeleportMenu() {
                   setScenic('park')
                 }}
               >
-                Nairobi National Park preview
+                Nairobi National Park tour
               </button>
               <button
                 className="button scenic-launch"
@@ -91,7 +92,7 @@ export function TeleportMenu() {
                   setScenic('sgr')
                 }}
               >
-                SGR train preview
+                SGR train tour
               </button>
             </section>
             <section>
