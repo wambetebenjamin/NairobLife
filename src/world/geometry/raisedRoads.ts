@@ -6,9 +6,14 @@
  * solid geometry: a deck with crash barriers, an underside, piers below the bridge spans
  * and retaining walls under the low ends of ramps. The same triangles are used as the
  * physics collider, so everything you can see you can walk (and later drive) on.
+ *
+ * The decks are also painted. The street painter (ground.ts) skips every road that has a
+ * height, so without this the flyovers would be the only tarmac in the city with no lane
+ * lines on it. The paint lies a centimetre above the tarmac and is emitted as its own
+ * quads, in deck order, so it cannot z-fight with the surface it sits on.
  */
-import type { RoadKind, ZoneFile } from '../zone/format'
-import type { FlatMesh } from './ground'
+import { DRIVABLE, type RoadKind, type ZoneFile } from '../zone/format'
+import { CENTRE_LINE, lanesEachWay, offsetLine, type FlatMesh } from './ground'
 import { GROUND, scale, type RGB } from './palette'
 import { cumulativeLength, ribbonEdges } from './ribbon'
 
@@ -22,6 +27,18 @@ const SOLID_MAX_HEIGHT = 4.5
 const BARRIER_MIN_HEIGHT = 1.4
 /** Barrier-free distance from the end of a ramp that merges into another deck. */
 const JUNCTION_CLEARANCE = 15
+/**
+ * Lane paint lies this far above the deck surface. It is the deck's own lift again, so the
+ * paint cannot z-fight with the tarmac it is painted on, and is far too small to see.
+ */
+const PAINT_LIFT = 0.012
+/** Width of a lane line, matching the streets below. */
+const LINE_WIDTH = 0.16
+/** Dashes along the deck: metres on, metres off, as the ground painter uses. */
+const DASH = 3
+const DASH_GAP = 6
+/** No paint within this distance of either end, where a ramp hands over to another deck. */
+const PAINT_END_CLEARANCE = 15
 
 const DECK_COLOUR: Record<RoadKind, RGB> = {
   motorway: GROUND.asphaltMajor,
@@ -41,6 +58,10 @@ const isFoot = (kind: RoadKind) => kind === 'footway' || kind === 'steps' || kin
 interface Chain {
   kind: RoadKind
   width: number
+  /** One-way, from the map. Decides how many carriageways the width is split into. */
+  oneWay: boolean
+  /** Lane count from the map, counting both directions, when it is known. */
+  lanes?: number
   /** Flat [x, z, ...] in metres. */
   line: number[]
   /** Height above ground per vertex, in metres. */
@@ -139,6 +160,74 @@ class SolidWriter {
       )
   }
 
+  /**
+   * A dash of lane paint lying flat on a deck: `width` across the direction of travel and
+   * `length` along it, centred on (x, z) at height y.
+   *
+   * The corners go left-back, right-back, left-front, right-front in the same winding as
+   * the deck quads, so the dash faces up like the tarmac under it.
+   */
+  paint(
+    x: number,
+    z: number,
+    dx: number,
+    dz: number,
+    length: number,
+    width: number,
+    y: number,
+  ): void {
+    const ax = (dx * length) / 2
+    const az = (dz * length) / 2
+    const hx = (-dz * width) / 2
+    const hz = (dx * width) / 2
+    this.quad(
+      [
+        x - ax + hx,
+        y,
+        z - az + hz,
+        x - ax - hx,
+        y,
+        z - az - hz,
+        x + ax - hx,
+        y,
+        z + az - hz,
+        x + ax + hx,
+        y,
+        z + az + hz,
+      ],
+      0,
+      1,
+      0,
+      GROUND.marking,
+    )
+  }
+
+  /** Dashes along a polyline, skipping any that would bend round a corner. */
+  dashes(line: number[], dist: number[], width: number, yAt: (metres: number) => number): void {
+    const n = line.length / 2
+    const total = dist[n - 1]
+    const period = DASH + DASH_GAP
+    // Ramps hand over to the next deck at their ends; paint there would hang over the join.
+    const first = Math.min(PAINT_END_CLEARANCE + DASH_GAP, total / 2)
+    const last = total - first
+    let seg = 0
+    for (let start = first; start + DASH <= last; start += period) {
+      const end = start + DASH
+      while (seg < n - 2 && dist[seg + 1] < start) seg++
+      const len = dist[seg + 1] - dist[seg]
+      // A dash belongs to one straight segment; one that would straddle a vertex is skipped
+      // rather than bent, which is what the street painter does too.
+      if (len <= 1e-6 || dist[seg + 1] < end) continue
+      const ax = line[seg * 2]
+      const az = line[seg * 2 + 1]
+      const dx = (line[seg * 2 + 2] - ax) / len
+      const dz = (line[seg * 2 + 3] - az) / len
+      const middle = (start + end) / 2
+      const along = middle - dist[seg]
+      this.paint(ax + dx * along, az + dz * along, dx, dz, DASH, width, yAt(middle))
+    }
+  }
+
   finish(): FlatMesh {
     return {
       positions: new Float32Array(this.pos),
@@ -157,6 +246,8 @@ function stitch(zone: ZoneFile): Chain[] {
     .map((road) => ({
       kind: road.k,
       width: road.w,
+      oneWay: road.ow === 1,
+      lanes: road.ln,
       line: road.p.map((value) => value / q),
       e: road.e!.map((value) => value / q),
       bridge: new Array<boolean>(road.p.length / 2 - 1).fill(road.br === 1),
@@ -450,6 +541,41 @@ export function buildRaisedRoads(zone: ZoneFile): FlatMesh {
       if (solid) {
         if (s === 0 || !solidAt(s - 1)) endWall(i0, -1)
         if (s === n - 2 || !solidAt(s + 1)) endWall(i1, 1)
+      }
+    }
+
+    // ---- lane paint, on the same rules as the streets that pass underneath
+    if (!foot && DRIVABLE[chain.kind]) {
+      const lanes = lanesEachWay({
+        k: chain.kind,
+        w: chain.width,
+        ...(chain.oneWay ? { ow: 1 as const } : {}),
+        ...(chain.lanes === undefined ? {} : { ln: chain.lanes }),
+      })
+      // Height of the deck at any distance along the chain, so a dash sits on the slope of
+      // the ramp it is painted on rather than on a flat plane.
+      const yAt = (metres: number) => {
+        let a = 0
+        while (a < n - 2 && dist[a + 1] < metres) a++
+        const span = dist[a + 1] - dist[a] || 1
+        const t = Math.max(0, Math.min(1, (metres - dist[a]) / span))
+        return chain.e[a] + (chain.e[a + 1] - chain.e[a]) * t + LIFT + PAINT_LIFT
+      }
+      // A two-way deck keeps traffic on its own side with a line down the middle.
+      if (!chain.oneWay && CENTRE_LINE[chain.kind]) {
+        w.dashes(offsetLine(chain.line, 0), dist, LINE_WIDTH * 1.4, yAt)
+      }
+      // Lane lines sit between the lanes of each carriageway: across the whole width of a
+      // one-way deck, across each half of a two-way one.
+      const carriageway = chain.oneWay ? chain.width : chain.width / 2
+      const laneWidth = carriageway / lanes
+      for (let lane = 1; lane < lanes; lane++) {
+        const offsets = chain.oneWay
+          ? [lane * laneWidth - chain.width / 2]
+          : [lane * laneWidth, -lane * laneWidth]
+        for (const offset of offsets) {
+          w.dashes(offsetLine(chain.line, offset), dist, LINE_WIDTH, yAt)
+        }
       }
     }
 
