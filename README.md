@@ -36,8 +36,11 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
   to be wet. Overcast skies, darker wet tarmac that mirrors the sky, and a rain field
   that follows the camera. It can be forced or turned off in Settings, or cycled with
   `N`.
-- **Ambient pedestrians** walk on pavements and around City Square. They are visual-only
-  and do not interact or collide yet.
+- **Ambient pedestrians** are articulated figures, not boxes: tapered torsos, a neck and
+  head with a face, arms with elbows and hands, legs with knees and feet that land on the
+  pavement. Each person's height, build, skin, hair and clothes come from their own seed;
+  they walk with a real gait or stand and fidget, at street level and around City Square.
+  They are visual-only and do not interact or collide yet.
 - **Ambient traffic**: cars, matatus and bodas drive the road graph, stop at the line for
   each other at crossings, obey the mapped signals, and pause at the stages. It is a
   stylised prototype, not a full simulation; see the roadmap for what is still missing.

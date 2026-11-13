@@ -66,6 +66,12 @@ Phase 3 is in progress. Later phases are plans, not promises.
       routes, wildlife simulation, railway service or walkable destinations.
 - [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
       Market; short walking paths include pauses. People are visual-only, not AI agents.
+- [x] Pedestrians as articulated figures rather than stacked boxes: tapered torso and
+      limbs, a necked head with a face, elbows, knees and feet, per-person height, build,
+      skin, hair and clothing, and a walk cycle whose knees bend backwards and whose feet
+      keep time with the ground. Standing figures fidget instead of freezing. The gait is
+      procedural, so it is lifelike in proportion and timing rather than motion-captured;
+      faces are suggested, not modelled, and nobody reacts to the player.
 - [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.
       Pick stages from Teleport; the journey starts at the selected departure stage and
       follows a shortest directed route, not an official route or existing traffic vehicle.
