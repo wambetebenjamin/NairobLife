@@ -389,17 +389,14 @@ export function phaseFor(distance: number, speed: number): number {
  * thigh minus knee. Applied with the knee the same way round as the thigh, every
  * pedestrian walks like a bird, which is exactly what the first version did.
  */
-export function legChain(
-  gait: WalkPose,
-  side: 0 | 1,
-): {
-  thigh: number
-  shin: number
-  foot: number
-} {
+export function legChain(gait: WalkPose, side: 0 | 1): { thigh: number; shin: number } {
   const thigh = side === 0 ? gait.thighL : gait.thighR
   const knee = side === 0 ? gait.kneeL : gait.kneeR
-  return { thigh, shin: thigh - knee, foot: 0 }
+  // The foot is deliberately not here: the renderer holds it flat to the ground by
+  // cancelling these two angles, which is a property of the shoe rather than of the gait.
+  // An earlier version returned `foot: 0` and nothing read it, which implied an angle that
+  // did not exist.
+  return { thigh, shin: thigh - knee }
 }
 
 /**
