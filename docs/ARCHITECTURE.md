@@ -239,7 +239,7 @@ Search the code for `TODO(` followed by a topic:
 | `TODO(matatus)`     | `World.tsx`, `TeleportMenu.tsx`, `vehicleModels.ts` | Routes between stages; text on livery and route boards |
 | Pedestrians         | `world/pedestrians/`                                | Ambient walkers; interaction remains future work       |
 | Pedestrian bodies   | `world/pedestrians/body.ts`, `figures.ts`           | Proportions, gait and part geometry, checked by tests  |
-| Landmark models     | `world/geometry/landmarks.ts`                       | KICC, the clock tower, Jamia Mosque; add more here     |
+| Landmark models     | `world/geometry/landmarks.ts`                       | The five hand-built icons; add more to `LANDMARKS`     |
 | `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs; lane lines on the flyover decks          |
 | `TODO(multiplayer)` | `vehicles/fleet.ts`, `MainMenu.tsx`                 | What a server would send for the vehicles              |
 | `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback  |

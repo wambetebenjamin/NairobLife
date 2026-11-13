@@ -125,6 +125,67 @@ class Lathe {
     }
   }
 
+  /**
+   * A barrel vault: an arch running along z, springing at `base` and rising by `rise`.
+   *
+   * This is the one thing a lathe cannot do. A lathe turns a profile about the y axis, so
+   * an arch — a profile that crosses its own axis — comes out as a ring mirrored through
+   * the centre, with a fan of zero-area triangles at the crown. Here the arch is swept
+   * along z instead, which is what an arch actually is.
+   *
+   * One skin, not two: a roof is a surface, and the inner face is the same surface seen
+   * from below. Emitting both would double the triangles and make them z-fight.
+   */
+  arch(
+    cx: number,
+    cz: number,
+    half: number,
+    base: number,
+    rise: number,
+    length: number,
+    colour: RGB,
+    options: { steps?: number; facade?: number; seed?: number; thickness?: number } = {},
+  ): void {
+    const steps = options.steps ?? 10
+    const facade = options.facade ?? 0
+    const seed = options.seed ?? 0
+    const thickness = options.thickness ?? 0.5
+    const outerZ = cz - length / 2
+    const innerZ = cz + length / 2
+    const outer: number[] = []
+    const inner: number[] = []
+    for (let i = 0; i <= steps; i++) {
+      const angle = (i / steps) * Math.PI
+      const x = cx + Math.cos(angle) * half
+      const y = base + Math.sin(angle) * rise
+      outer.push(this.vertex([x, y, outerZ], colour, facade, seed, (x - cx) / 3.2, y / 3.4))
+      inner.push(this.vertex([x, y, innerZ], colour, facade, seed, (x - cx) / 3.2, y / 3.4))
+    }
+    // Outer face and underside are the same quads: emit each once, wound outwards.
+    for (let i = 0; i < steps; i++) {
+      this.triangle(outer[i], outer[i + 1], inner[i + 1])
+      this.triangle(outer[i], inner[i + 1], inner[i])
+    }
+    // End walls, so the ends of the vault are open no longer. They are a fan from the
+    // centre of the base, not from a corner of the arch: the two ends of an arch sit at
+    // y = base, and fanning from one of them gives a row of zero-area slivers.
+    for (const [end, z, near] of [
+      [outer, outerZ, true],
+      [inner, innerZ, false],
+    ] as [number[], number, boolean][]) {
+      const foot = this.vertex([cx, base, z], colour, facade, seed)
+      for (let i = 0; i < steps; i++) {
+        if (near) this.triangle(foot, end[i], end[i + 1])
+        else this.triangle(foot, end[i + 1], end[i])
+      }
+    }
+    // And a band of thickness along each side, under the springing.
+    for (const i of [0, steps]) {
+      const x = i === 0 ? cx - half : cx + half
+      this.box([x, base - thickness / 2, cz], [thickness, thickness, length], colour, facade, seed)
+    }
+  }
+
   /** A flat disc: a roof, a plinth, the top of a low wall. */
   disc(cx: number, y: number, cz: number, radius: number, colour: RGB, segments = 24): void {
     const ring: number[] = []
@@ -332,9 +393,9 @@ export function kicc(plot: Plot): LandmarkMesh {
  */
 export function clockTower(plot: Plot): LandmarkMesh {
   const b = new Lathe()
-  // `radius` is the half-width of the footprint, and a square shaft's corners are
-  // sqrt(2) further out than its faces: size the shaft from that, not from the radius.
-  const W = Math.max(4, plot.radius * 0.7)
+  // A square shaft built 2W across has its corners at W*sqrt(2) from the centre, and the
+  // plot's radius is the furthest corner, so W is the radius over sqrt(2) — not the radius.
+  const W = Math.max(3, plot.radius / Math.SQRT2)
   // The model is a clock tower, not a 40 m shaft: the map's height is the envelope it must
   // fit inside, and the tower uses about four fifths of it.
   const H = plot.height * 0.8
@@ -354,8 +415,9 @@ export function clockTower(plot: Plot): LandmarkMesh {
     const angle = (side / 4) * Math.PI * 2
     const dx = Math.sin(angle)
     const dz = Math.cos(angle)
+    // Set the faces very slightly into the stage, so no clock dial pokes out of the plot.
     b.box(
-      [dx * W * 0.995, stageBottom + stageHeight / 2, dz * W * 0.995],
+      [dx * W * 0.97, stageBottom + stageHeight / 2, dz * W * 0.97],
       [W * 1.1, stageHeight * 0.62, W * 0.12],
       slate,
       0,
@@ -367,7 +429,9 @@ export function clockTower(plot: Plot): LandmarkMesh {
   // Parapet, then the pyramid roof. Both stay inside the mapped footprint: a tower that
   // overhangs its plot grows through whatever is mapped next to it.
   const parapet = stageBottom + stageHeight
-  const cap = Math.min(W * 1.12, plot.radius)
+  // The cap's corners must stay inside the plot too, and a square cap's corner is
+  // sqrt(2) further out than its face, so the cap is bounded by the radius over sqrt(2).
+  const cap = Math.min(W * 1.12, plot.radius / Math.SQRT2)
   b.box([0, parapet + 0.8, 0], [cap * 2, 1.6, cap * 2], trim, 0, 0.2)
   b.lathe(
     0,
@@ -467,8 +531,139 @@ export function jamiaMosque(plot: Plot): LandmarkMesh {
   return b.finish()
 }
 
+/**
+ * The Kenya National Archives: a low colonial block whose whole character is the arcaded
+ * colonnade along its front and the deep eaves over it. The map has it as a 7.6 m block, so
+ * the model keeps that height and spends its triangles on the colonnade and the roof.
+ *
+ * It is also the building with the Murumbi Gallery below it, which is not modelled: this is
+ * a street-level impression, not a survey.
+ */
+export function archives(plot: Plot): LandmarkMesh {
+  const b = new Lathe()
+  // `radius` is the furthest corner of the mapped rectangle from its centre, so a block of
+  // half-width W and half-depth D must satisfy hypot(W/2, D/2) <= radius.
+  const W = Math.max(8, plot.radius * 1.36)
+  const D = Math.max(8, plot.radius * 1.02)
+  const H = plot.height
+  const wall = hex('#cfc4ab')
+  const stone = hex('#ded5c2')
+  const roof = hex('#8a7f6d')
+  const dark = hex('#3a3428')
+
+  // The block itself, with a plinth and a deep eave.
+  b.box([0, H * 0.5, 0], [W, H, D], wall, 1, 0.5)
+  b.box([0, H * 0.06, 0], [W * 1.04, H * 0.12, D * 1.04], stone, 0, 0.5)
+  b.box([0, H + 0.5, 0], [W * 1.12, 1, D * 1.12], roof, 0, 0.5)
+
+  // The arcade along the long front: piers with a lintel over them, and a dark recess
+  // behind each opening, which is what makes it read as arches from the street.
+  const bays = 9
+  const bay = W / bays
+  const front = D / 2 + 0.5
+  for (let i = 0; i < bays; i++) {
+    const x = -W / 2 + bay * (i + 0.5)
+    // The opening: a dark panel, set slightly back.
+    b.box([x, H * 0.46, front - 0.35], [bay * 0.72, H * 0.62, 0.2], dark, 0, 0.5)
+    // The pier between this opening and the next.
+    if (i < bays - 1) {
+      b.box([x + bay / 2, H * 0.5, front], [bay * 0.28, H * 0.8, 0.5], stone, 0, 0.5)
+    }
+  }
+  // The lintel and the cornice above the arcade.
+  b.box([0, H * 0.84, front], [W, H * 0.12, 0.6], stone, 0, 0.5)
+  b.box([0, H * 0.94, front], [W * 1.02, H * 0.06, 0.9], stone, 0, 0.5)
+
+  // The ridge of a shallow pitched roof, running across the narrow way.
+  b.box([0, H + 2.2, 0], [W * 1.05, 0.6, D * 0.5], roof, 0, 0.5)
+
+  return b.finish()
+}
+
+/**
+ * Nairobi's central railway station: a long, low building with a big arched trainshed and a
+ * platform canopy running out behind it. The map has it 144 m by 85 m at 9 m high, which is
+ * the footprint of the whole station, so the model fills it with a shed and a canopy rather
+ * than pretending the whole thing is a 9 m block.
+ */
+export function railwayStation(plot: Plot): LandmarkMesh {
+  const b = new Lathe()
+  const W = Math.max(20, plot.radius * 2.0)
+  const D = Math.max(14, plot.radius * 1.2)
+  const H = Math.max(8, plot.height)
+  const wall = hex('#d2c7b0')
+  const stone = hex('#b8ab92')
+  const steel = hex('#6d6f6a')
+  const glass = hex('#8ea0a4')
+  const platform = hex('#9a958a')
+
+  // The main block, and its cornice.
+  b.box([0, H * 0.5, 0], [W * 0.62, H, D], wall, 1, 0.6)
+  b.box([0, H * 0.97, 0], [W * 0.64, H * 0.08, D * 1.04], stone, 0, 0.6)
+
+  // The entrance: a tall arched portico on the front, which is the part people know.
+  const front = D / 2
+  b.box([0, H * 0.42, front + 0.6], [W * 0.2, H * 0.84, 1.4], stone, 1, 0.6)
+  for (const side of [-1, 1]) {
+    b.box([side * W * 0.075, H * 0.3, front + 1.2], [W * 0.035, H * 0.6, 1.2], wall, 0, 0.6)
+  }
+
+  // The trainshed behind: an arched roof over the tracks, running the length of the plot.
+  // An arch is not a lathe: use the vault builder, which knows about crossing the axis.
+  const shedX = -W * 0.16
+  const shedWidth = W * 0.3
+  b.arch(shedX, 0, shedWidth * 0.5, H, shedWidth * 0.42, D * 0.94, steel, {
+    steps: 12,
+    facade: 3,
+    seed: 0.6,
+  })
+  // Standing walls under the springing of the vault, at the platform edge.
+  for (const side of [-1, 1]) {
+    b.box([shedX + side * shedWidth * 0.5, H * 0.5, 0], [0.6, H, D * 0.94], steel, 3, 0.6)
+  }
+  // Glazing along the crown, where the light comes in.
+  b.box([shedX, H + shedWidth * 0.42 + 0.15, 0], [shedWidth * 0.5, 0.3, D * 0.9], glass, 0, 0.6)
+
+  // The platform canopy: a flat slab on columns down one side.
+  const canopyX = W * 0.3
+  const canopy = H * 0.78
+  b.box([canopyX, canopy, 0], [W * 0.24, 0.4, D * 0.92], steel, 0, 0.6)
+  for (let i = -3; i <= 3; i++) {
+    b.box([canopyX, canopy * 0.5, (i / 3) * D * 0.4], [0.4, canopy, 0.4], steel, 0, 0.6)
+  }
+  // The island platform under it.
+  b.box([canopyX, 0.25, 0], [W * 0.24, 0.5, D * 0.92], platform, 0, 0.6)
+
+  return b.finish()
+}
+
+/**
+ * Scale a mesh about its own centre so nothing reaches past `limit`. A landmark is a
+ * composition of boxes and lathes, and each one adds a little overhang; rather than chase
+ * every parapet and cornice by hand, the model is measured and, if it overruns, scaled to
+ * fit. It is cheap and it cannot be wrong, which matters because an overhanging landmark
+ * grows through whatever the map placed next door.
+ */
+export function fitToPlot(mesh: LandmarkMesh, limit: number): LandmarkMesh {
+  let far = 0
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    far = Math.max(far, Math.hypot(mesh.positions[i], mesh.positions[i + 2]))
+  }
+  if (far <= limit * 1.001 || far === 0) return mesh
+  const k = (limit / far) * 0.999
+  const positions = new Float32Array(mesh.positions.length)
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    positions[i] = mesh.positions[i] * k
+    // Height is left alone: a building that is too wide is too wide, not too short, and
+    // squashing its height would make a tower into a shed.
+    positions[i + 1] = mesh.positions[i + 1]
+    positions[i + 2] = mesh.positions[i + 2] * k
+  }
+  return { ...mesh, positions }
+}
+
 /** A landmark's model, by the name the zone file gives the building. */
-export type LandmarkKind = 'kicc' | 'clockTower' | 'jamiaMosque'
+export type LandmarkKind = 'kicc' | 'clockTower' | 'jamiaMosque' | 'archives' | 'railwayStation'
 
 /** How a landmark is recognised in a zone file, and how big it really is. */
 interface LandmarkDef {
@@ -486,6 +681,8 @@ interface LandmarkDef {
  * varies with how carefully somebody mapped it.
  */
 export const LANDMARKS: readonly LandmarkDef[] = [
+  { kind: 'archives', match: /^kenya national archives$/i, build: archives },
+  { kind: 'railwayStation', match: /^nairobi central railway station$/i, build: railwayStation },
   // The map has the KICC tower, and also a separate low building and an amphitheatre
   // around it. Only the tower gets the model; the others keep their mapped footprints.
   { kind: 'kicc', match: /^kenyatta international convention centre$/i, build: kicc },
@@ -496,5 +693,8 @@ export const LANDMARKS: readonly LandmarkDef[] = [
 /** The landmark a building is, if it is one. */
 export function landmarkFor(name: string | undefined): LandmarkDef | undefined {
   if (!name) return undefined
-  return LANDMARKS.find((landmark) => landmark.match.test(name.trim()))
+  const def = LANDMARKS.find((landmark) => landmark.match.test(name.trim()))
+  if (!def) return undefined
+  // Fit every model to its plot, whichever one it is, so this cannot be forgotten.
+  return { ...def, build: (plot) => fitToPlot(def.build(plot), plot.radius) }
 }

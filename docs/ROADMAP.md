@@ -114,13 +114,13 @@ Phase 3 is in progress. Later phases are plans, not promises.
       Nairobi National Park, the SGR and major malls need their own actual mapped zones;
       they cannot be visited from the current CBD map.
 - [ ] Terrain: the real slope from Upper Hill down to the Nairobi River
-- [x] Hand-made models for three icons, built from lathes and boxes rather than extruded
-      from their footprints: KICC (the round tower standing in its flared skirt), the
-      Parliament clock tower, and Jamia Mosque with its domes and minarets. Each replaces
-      its mapped footprint, so it stands where the map says. The National Archives and the
-      Railway Station still use their mapped shapes.
-- [ ] Hand-made models for the rest of the icons: the National Archives, the Railway
-      Station
+- [x] Hand-made models for five icons, built from lathes, vaults and boxes rather than
+      extruded from their footprints: KICC (the round tower standing in its flared skirt),
+      the Parliament clock tower, Jamia Mosque with its domes and minarets, the National
+      Archives with its arcaded colonnade, and the Central Railway Station with its vaulted
+      trainshed and platform canopy. Each replaces its mapped footprint, so it stands where
+      the map says, and each is fitted inside that footprint so it cannot grow through its
+      neighbours. The remaining mapped landmarks keep their map shapes.
 - [ ] Water that looks like water; the Nairobi River
 - [x] Rain: the long rains and the short rains, on the real calendar, with overcast
       skies, wet dark tarmac and a rain field that follows the camera. Settings can force

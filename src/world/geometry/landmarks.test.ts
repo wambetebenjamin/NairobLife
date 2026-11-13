@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { buildBuildingMesh } from './buildings'
 import {
   LANDMARKS,
+  archives,
   clockTower,
   jamiaMosque,
   kicc,
   landmarkFor,
+  railwayStation,
   type LandmarkMesh,
 } from './landmarks'
 
@@ -50,6 +52,22 @@ function inspect(mesh: LandmarkMesh) {
 
 /** A landmark on a plot the size of its mapped footprint. */
 const plot = { x: 0, z: 0, radius: 40, height: 105 }
+
+/** The mapped name that identifies each kind of landmark. */
+function nameFor(kind: string): string {
+  switch (kind) {
+    case 'kicc':
+      return 'Kenyatta International Convention Centre'
+    case 'clockTower':
+      return 'Parliament clock tower'
+    case 'jamiaMosque':
+      return 'Jamia Mosque'
+    case 'archives':
+      return 'Kenya National Archives'
+    default:
+      return 'Nairobi Central Railway Station'
+  }
+}
 
 describe('landmark models', () => {
   for (const landmark of LANDMARKS) {
@@ -137,11 +155,55 @@ describe('landmark models', () => {
     expect(mesh.indices.length / 3).toBeGreaterThan(40)
   })
 
+  it('builds the Archives as an arcade with a colonnade, not a plain block', () => {
+    const mesh = archives({ x: 0, z: 0, radius: 33, height: 7.6 })
+    const { maxY } = inspect(mesh)
+    // Still a low building: the Archives is two storeys with a deep eave.
+    expect(maxY).toBeGreaterThan(7)
+    expect(maxY).toBeLessThan(14)
+    // And enough triangles for nine bays of piers and openings.
+    expect(mesh.indices.length / 3).toBeGreaterThan(100)
+  })
+
+  it('builds the railway station with a vaulted trainshed', () => {
+    const mesh = railwayStation({ x: 0, z: 0, radius: 76, height: 9 })
+    const { maxY } = inspect(mesh)
+    // The shed rises well above the 9 m block: it is the tallest thing at the station.
+    expect(maxY).toBeGreaterThan(12)
+  })
+
+  it('builds a vault that is a surface, not a hole', () => {
+    // The arch primitive is the one part a lathe could not express: a profile crossing its
+    // own axis. A vault is a single skin, so every face must be wound outwards; a second
+    // inner skin would double the triangles and z-fight with the first.
+    const mesh = railwayStation({ x: 0, z: 0, radius: 76, height: 9 })
+    const { outwards, inwards, degenerate } = inspect(mesh)
+    expect(degenerate).toBe(0)
+    expect(outwards).toBeGreaterThan(0)
+    expect(inwards).toBe(0)
+  })
+
   it('builds the mosque with domes and minarets above the hall', () => {
     const mesh = jamiaMosque({ x: 0, z: 0, radius: 53, height: 14 })
     // Two minarets are the tallest part, well above the mapped 14 m wall.
     const { maxY } = inspect(mesh)
     expect(maxY).toBeGreaterThan(20)
+  })
+
+  it('fits inside a plot that is a rectangle, measured from its corners', () => {
+    // `radius` is the furthest corner of the mapped footprint. A model may be any shape,
+    // but nothing may reach outside that, or it grows through the building next door.
+    for (const def of LANDMARKS) {
+      for (const radius of [5, 12, 33, 77]) {
+        const built = landmarkFor(nameFor(def.kind))!
+        const mesh = built.build({ x: 0, z: 0, radius, height: def.kind === 'kicc' ? 105 : 20 })
+        let far = 0
+        for (let i = 0; i < mesh.positions.length; i += 3) {
+          far = Math.max(far, Math.hypot(mesh.positions[i], mesh.positions[i + 2]))
+        }
+        expect(far, `${def.kind} at radius ${radius}`).toBeLessThanOrEqual(radius * 1.001)
+      }
+    }
   })
 
   it('recognises a building by its mapped name, and nothing else', () => {
