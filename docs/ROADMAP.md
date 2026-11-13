@@ -49,7 +49,12 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Road paint: kerb lines, lane lines, zebra crossings and stop lines
 - [ ] Speed bumps. The map data has none for the CBD, so they need a fresh download
       or mapping on OpenStreetMap first
-- [ ] Raised pavements with kerbs a wheel has to climb; lane lines on the flyover decks
+- [ ] Raised pavements with kerbs a wheel has to climb
+- [x] Lane lines on the flyover decks: the Expressway viaduct and the Globe flyover are
+      painted with the same rules as the streets below them (a centre line on a two-way
+      deck, one between the lanes of a one-way one), following the slope of the ramp and
+      stopping short of the ends where one deck hands over to another. Footbridges and
+      stairways get none. About 940 dashes, +12% to the raised mesh.
 - [x] Engine and horn sounds, synthesised in the browser rather than sampled: the nearest
       few ambient vehicles get an engine note panned to where they are, and a matatu
       sounds its horn as it pulls up at a stage. Volume and mute are in Settings, and

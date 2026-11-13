@@ -77,7 +77,7 @@ const ROAD_COLOUR: Record<RoadKind, RGB> = {
   steps: GROUND.steps,
 }
 
-const CENTRE_LINE: Partial<Record<RoadKind, true>> = {
+export const CENTRE_LINE: Partial<Record<RoadKind, true>> = {
   trunk: true,
   primary: true,
   secondary: true,
@@ -116,7 +116,7 @@ const CROSSING_REACH = 6
  * How many lanes a road has in each direction of travel. The map says for a few roads
  * (`ln` counts every lane, both directions together); for the rest we go by the width.
  */
-export function lanesEachWay(road: ZoneRoad): number {
+export function lanesEachWay(road: Pick<ZoneRoad, 'k' | 'w' | 'ow' | 'ln'>): number {
   const ways = road.ow ? 1 : 2
   if (road.ln) return Math.max(1, Math.floor(road.ln / ways))
   return Math.max(1, Math.floor(road.w / ways / LANE_WIDTH))
