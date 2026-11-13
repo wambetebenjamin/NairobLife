@@ -86,6 +86,8 @@ describe('ambient traffic graph', () => {
       { x: 311.4, z: -407.8 },
     ]) {
       const agents = makeTraffic(real, start)
+      // Skipping a rejected candidate must not thin the traffic: the city should still
+      // get a full complement, not 60-odd cars and a lot of empty road.
       expect(agents).toHaveLength(65)
       const bodies = agents.map((a) => {
         const pose = trafficPose(real.edges[a.edge], a.progress)
