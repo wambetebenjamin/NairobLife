@@ -49,7 +49,12 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Road paint: kerb lines, lane lines, zebra crossings and stop lines
 - [ ] Speed bumps. The map data has none for the CBD, so they need a fresh download
       or mapping on OpenStreetMap first
-- [ ] Raised pavements with kerbs a wheel has to climb
+- [ ] Raised pavements with kerbs a wheel has to climb. The player is ready for it: a test
+      now proves they step over anything up to 0.5 m, so a 0.15 m kerb would not block them.
+      The vehicles are ready too, in the simulation. What is missing is the geometry and the
+      collider, and that has to be seen rather than reasoned about -- a kerb that is a live
+      collider sits under every parked boda and every pavement walker, and this machine has
+      no browser to check the result in.
 - [x] Lane lines on the flyover decks: the Expressway viaduct and the Globe flyover are
       painted with the same rules as the streets below them (a centre line on a two-way
       deck, one between the lanes of a one-way one), following the slope of the ramp and
