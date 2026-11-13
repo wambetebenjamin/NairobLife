@@ -45,8 +45,10 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
   each other at crossings, obey the mapped signals, and pause at the stages. It is a
   stylised prototype, not a full simulation; see the roadmap for what is still missing.
 - **Sound made in the browser**: the nearest vehicles get engine notes panned to where
-  they are, and matatus sound their horns pulling into stages. No audio files: every
-  sound is synthesised. Volume and mute in Settings.
+  they are, matatus sound their horns pulling into stages, your own feet fall on whatever
+  is under them — tarmac, paving slabs, gravel — and a low wash of distant traffic sits
+  under all of it, louder beside a big road or near a stage. No audio files: every sound is
+  synthesised. Volume and mute in Settings.
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
   real latitude and longitude, a speedometer, and the current real-world Nairobi time.
   The separate game clock controls the day/night cycle.
@@ -54,8 +56,8 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
   the wheel.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
-What is _not_ here yet: a full traffic simulation, interactive pedestrians, sound on foot,
-multiplayer. See the [roadmap](docs/ROADMAP.md).
+What is _not_ here yet: a full traffic simulation, interactive pedestrians, multiplayer.
+See the [roadmap](docs/ROADMAP.md).
 
 ## Run it
 

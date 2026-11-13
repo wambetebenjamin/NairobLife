@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { falloff, panOf } from './placement'
-import { ENGINE_LOOP, HORN_SECONDS, SAMPLE_RATE, engineLoop, horn } from './synth'
+import {
+  ENGINE_LOOP,
+  HORN_SECONDS,
+  SAMPLE_RATE,
+  cityBedLoop,
+  engineLoop,
+  footstep,
+  horn,
+} from './synth'
 
 /** Peak, RMS and the share of samples at exactly the same value. */
 function shape(samples: Float32Array) {
@@ -116,5 +124,74 @@ describe('placing a sound', () => {
     // It falls away faster than distance: a vehicle twice as far is a quarter as loud.
     expect(falloff(50, 100)).toBeCloseTo(0.25, 5)
     expect(falloff(10, 100)).toBeGreaterThan(falloff(20, 100))
+  })
+})
+
+describe('a footstep', () => {
+  it('is a short, quiet burst of noise that never clips', () => {
+    const samples = footstep(2200, 90, 0.09, 3)
+    // A step is tens of milliseconds, not a note.
+    expect(samples.length).toBeGreaterThan(500)
+    expect(samples.length).toBeLessThan(SAMPLE_RATE * 0.4)
+    let peak = 0
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample))
+    expect(peak).toBeGreaterThan(0.05)
+    expect(peak).toBeLessThanOrEqual(1)
+    for (const sample of samples) expect(Number.isFinite(sample)).toBe(true)
+  })
+
+  it('starts at once and fades to nothing, so it cannot click', () => {
+    const samples = footstep(2200, 90, 0.09, 3)
+    expect(Math.abs(samples[0])).toBeLessThan(0.05)
+    // The end is faded: the last sample is silent.
+    expect(Math.abs(samples[samples.length - 1])).toBeLessThan(1e-6)
+  })
+
+  it('is the same step twice from the same seed, and a different one otherwise', () => {
+    expect(Array.from(footstep(2200, 90, 0.09, 3))).toEqual(Array.from(footstep(2200, 90, 0.09, 3)))
+    const a = Array.from(footstep(2200, 90, 0.09, 3))
+    const b = Array.from(footstep(2200, 90, 0.09, 4))
+    expect(a).not.toEqual(b)
+  })
+
+  it('sounds the surface: gravel is duller than concrete', () => {
+    // The cutoff is one-pole, so a brighter surface has more energy in its high band.
+    const brightness = (tone: number) => {
+      const samples = footstep(tone, 90, 0.09, 3)
+      let movement = 0
+      for (let i = 1; i < samples.length; i++) movement += Math.abs(samples[i] - samples[i - 1])
+      return movement
+    }
+    expect(brightness(3400)).toBeGreaterThan(brightness(1500))
+  })
+})
+
+describe("the city's own bed", () => {
+  it('is a seamless drone that never clips', () => {
+    const samples = cityBedLoop(220)
+    expect(samples.length).toBe(SAMPLE_RATE)
+    let peak = 0
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample))
+    expect(peak).toBeGreaterThan(0.1)
+    expect(peak).toBeLessThanOrEqual(1)
+    // It is a drone, not a wobble: the first and last samples are close enough to loop
+    // without a click, and there is no long silence in it.
+    expect(Math.abs(samples[0] - samples[samples.length - 1])).toBeLessThan(0.35)
+    let quiet = 0
+    for (const sample of samples) if (Math.abs(sample) < 0.02) quiet++
+    expect(quiet / samples.length).toBeLessThan(0.3)
+  })
+
+  it('pitches with the road: a bigger road hums higher', () => {
+    const low = cityBedLoop(200)
+    const high = cityBedLoop(400)
+    // Count zero crossings: a higher drone crosses zero more often.
+    const crossings = (samples: Float32Array) => {
+      let count = 0
+      const span = Math.min(samples.length, 4410)
+      for (let i = 1; i < span; i++) if (samples[i - 1] < 0 !== samples[i] < 0) count++
+      return count
+    }
+    expect(crossings(high)).toBeGreaterThan(crossings(low))
   })
 })

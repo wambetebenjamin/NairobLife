@@ -46,8 +46,7 @@ export function engineLoop(kind: string, rate = SAMPLE_RATE): Float32Array<Array
     const fire = pulse(phase, kind === 'matatu' ? 0.18 : 0.12)
     // A second, weaker pulse one revolution on. Two cylinders out of phase.
     const second = pulse(phase + 0.5, 0.1) * 0.6
-    const drone =
-      Math.sin(phase * Math.PI * 2) * 0.25 + Math.sin(phase * Math.PI * 4) * 0.12
+    const drone = Math.sin(phase * Math.PI * 2) * 0.25 + Math.sin(phase * Math.PI * 4) * 0.12
     // Cheap white noise, deterministic so the same loop is always the same loop.
     noise = (noise * 9301 + 49297) % 233280
     const grit = (noise / 233280 - 0.5) * (kind === 'boda' ? 0.3 : 0.16)
@@ -117,6 +116,73 @@ function normalise(buffer: Float32Array, peak: number): void {
   if (loudest === 0) return
   const scale = peak / loudest
   for (let i = 0; i < buffer.length; i++) buffer[i] *= scale
+}
+
+/**
+ * A footstep: a scuff of filtered noise over a soft body thump.
+ *
+ * The noise is a burst rather than a tap, because a foot rolls heel to toe; the thump is
+ * the weight of the body arriving. Both are short, and the shape matters more than the
+ * exact spectrum: a step is recognisable by its envelope. The surface decides the numbers
+ * (see `footsteps.ts`), so a step on gravel is a longer, duller scuff than one on concrete.
+ */
+export function footstep(
+  tone: number,
+  thump: number,
+  decay: number,
+  seed: number,
+  rate = SAMPLE_RATE,
+): Float32Array<ArrayBuffer> {
+  const seconds = Math.min(0.3, decay * 3)
+  const length = Math.max(1, Math.round(seconds * rate))
+  const samples = new Float32Array(length)
+  // A cheap deterministic noise: a hash on the sample index, so the same step sounds the
+  // same every time and a test can check it.
+  let state = (seed * 2654435761) >>> 0
+  let low = 0
+  const cutoff = Math.min(0.9, tone / rate)
+  for (let i = 0; i < length; i++) {
+    state = (state * 1664525 + 1013904223) >>> 0
+    const white = (state / 0xffffffff) * 2 - 1
+    // One-pole low-pass: the surface's brightness.
+    low += (white - low) * cutoff
+    const t = i / rate
+    const scuff = Math.exp(-t / decay) * low
+    const weight = Math.exp(-t / (decay * 1.8)) * Math.sin(2 * Math.PI * thump * t) * 0.5
+    samples[i] = (scuff * 0.7 + weight) * 0.8
+  }
+  // Fade the last few samples, so the buffer cannot click when it ends.
+  const fade = Math.min(length, Math.round(0.004 * rate))
+  for (let i = 0; i < fade; i++) samples[length - 1 - i] *= i / fade
+  return samples
+}
+
+/**
+ * The city's own bed: a low, steady wash with no rhythm to it, made from a few detuned
+ * sines and a breath of noise. It is a drone on purpose — a city heard from inside a
+ * street is not a sequence of events, it is a floor.
+ */
+export function cityBedLoop(tone: number, rate = SAMPLE_RATE): Float32Array<ArrayBuffer> {
+  // A whole number of cycles per buffer, like the engines, so it loops without a seam.
+  const seconds = 1
+  const length = Math.round(seconds * rate)
+  const samples = new Float32Array(length)
+  let state = 0x9e3779b9
+  let low = 0
+  // Snap the tone so the buffer holds an exact number of cycles.
+  const cycles = Math.max(1, Math.round(tone))
+  for (let i = 0; i < length; i++) {
+    const t = i / rate
+    state = (state * 1664525 + 1013904223) >>> 0
+    const white = (state / 0xffffffff) * 2 - 1
+    low += (white - low) * 0.02
+    const drone =
+      Math.sin(2 * Math.PI * cycles * t) * 0.5 +
+      Math.sin(2 * Math.PI * cycles * 2 * t) * 0.22 +
+      Math.sin(2 * Math.PI * cycles * 3 * t) * 0.1
+    samples[i] = drone * 0.5 + low * 0.8
+  }
+  return samples
 }
 
 /**

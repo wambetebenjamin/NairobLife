@@ -109,7 +109,10 @@ export function SettingsPanel() {
             onChange={(event) => update({ sensitivity: Number(event.target.value) })}
           />
         </Row>
-        <Row label={t('volume')} note={settings.muted ? t('soundOff') : `${Math.round(settings.volume * 100)}%`}>
+        <Row
+          label={t('volume')}
+          note={settings.muted ? t('soundOff') : `${Math.round(settings.volume * 100)}%`}
+        >
           <div className="setting__pair">
             <input
               type="range"
@@ -120,10 +123,7 @@ export function SettingsPanel() {
               aria-label={t('volume')}
               onChange={(event) => update({ volume: Number(event.target.value) })}
             />
-            <Toggle
-              checked={!settings.muted}
-              onChange={(on) => update({ muted: !on })}
-            />
+            <Toggle checked={!settings.muted} onChange={(on) => update({ muted: !on })} />
           </div>
         </Row>
         <Row label={t('invertY')}>

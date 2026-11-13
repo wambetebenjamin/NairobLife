@@ -21,8 +21,12 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Replace the bootstrap map snapshot with a live OpenStreetMap download
       (`npm run osm:fetch -- nairobi-cbd`, see [DATA.md](DATA.md))
 - [ ] Play-test on real phones, Safari and Firefox
-- [ ] Sound on foot: footsteps, and the city ambience around them. Ambient traffic engines
-      and horns are in (see Phase 2).
+- [x] Sound on foot: a footstep every stride, timed to the distance walked rather than a
+      fixed interval, and different on tarmac, paving slabs, gravel and concrete; plus a
+      low bed of distant traffic that rises beside a big road and near a stage. The
+      surface is inferred from the mapped road under the player, and the bed's level from
+      that road's width and the distance to the nearest stage — it is an atmospheric bed,
+      not a measurement of real traffic volume.
 - [ ] Gamepad support
 
 ## Phase 2: vehicles (this version)
