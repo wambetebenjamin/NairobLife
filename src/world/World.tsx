@@ -22,7 +22,7 @@ export function World({ zone }: { zone: LoadedZone }) {
       <Ground zone={zone} />
       <Buildings chunks={zone.geometry.chunks} />
       <RaisedRoads mesh={zone.geometry.raised} />
-      <Trees trees={zone.geometry.trees} />
+      <Trees trees={zone.geometry.trees} chunks={zone.geometry.treeChunks} />
       <Boundary bounds={zone.index.bounds} />
     </group>
   )

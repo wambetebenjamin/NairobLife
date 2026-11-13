@@ -3,6 +3,7 @@
  * Geometry travels as typed arrays whose buffers are transferred, not copied.
  */
 import type { BuildingMesh } from '../geometry/buildings'
+import type { TreeChunk } from '../geometry/trees'
 import type { FlatMesh } from '../geometry/ground'
 import type { ZoneFile } from './format'
 
@@ -30,6 +31,8 @@ export interface ZoneGeometry {
   raised: FlatMesh
   /** TREE_STRIDE floats per tree; see geometry/trees.ts. */
   trees: Float32Array
+  /** The same trees, built into wood and leaves per 400 m square, for culling. */
+  treeChunks: TreeChunk[]
 }
 
 export type LoadStage = 'download' | 'buildings' | 'roads' | 'trees'

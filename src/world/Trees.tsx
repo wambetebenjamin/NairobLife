@@ -1,100 +1,79 @@
 /**
- * Trees, drawn with instancing: two draw calls (trunks, canopies) for a few thousand
- * trees. Shapes are deliberately simple; colour and silhouette do the work.
+ * Trees, drawn with instancing: one draw call for wood and one for foliage.
  *
- * About one tree in three gets the flat-topped umbrella shape of an acacia.
+ * Every tree in the zone is baked into two merged meshes when the zone loads (see
+ * geometry/trees.ts), so a few thousand of them cost two draw calls, not a few thousand
+ * draw calls. Each is a real little model: a tapered, leaning trunk with fork branches,
+ * and a canopy of overlapping lumps that carries the light on top and the shade
+ * underneath. Palms get arcing fronds, acacias a flat umbrella, cypresses a spire.
+ *
+ * The foliage sways in the wind: one shared uniform and each tree's own position, so an
+ * avenue moves together in a gust. Rain brings more wind with it.
  */
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import {
-  Color,
-  CylinderGeometry,
-  IcosahedronGeometry,
-  Matrix4,
-  MeshLambertMaterial,
-  Quaternion,
-  Vector3,
-  type InstancedMesh,
-} from 'three'
-import { hash01 } from '../core/random'
-import { TREE_TRUNK } from './geometry/palette'
-import { TREE_STRIDE, trunkRadius } from './geometry/trees'
+import { useFrame } from '@react-three/fiber'
+import { useEffect, useMemo } from 'react'
+import { BufferAttribute, BufferGeometry } from 'three'
+import { useGame } from '../state/gameStore'
+import { runtime } from '../state/runtime'
+import { TREE_STRIDE, trunkRadius, type TreeChunk, type TreeMesh } from './geometry/trees'
+import { createFoliageMaterial, foliageUniforms } from './materials/foliageMaterial'
 import { useStaticColliders } from './physics/useStaticColliders'
 
-const UP = new Vector3(0, 1, 0)
+/** A BufferGeometry from the plain arrays the tree builder made. */
+function toGeometry(mesh: TreeMesh): BufferGeometry {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(mesh.positions, 3))
+  geometry.setAttribute('normal', new BufferAttribute(mesh.normals, 3))
+  geometry.setAttribute('color', new BufferAttribute(mesh.colors, 3))
+  geometry.setIndex(new BufferAttribute(mesh.indices, 1))
+  geometry.computeBoundingSphere()
+  geometry.computeBoundingBox()
+  return geometry
+}
 
-export function Trees({ trees }: { trees: Float32Array }) {
+export function Trees({ trees, chunks }: { trees: Float32Array; chunks: TreeChunk[] }) {
   const count = trees.length / TREE_STRIDE
-  const trunks = useRef<InstancedMesh>(null)
-  const canopies = useRef<InstancedMesh>(null)
+  const phase = useGame((state) => state.phase)
 
-  const assets = useMemo(() => {
-    // A unit trunk: 1 m tall, 1 m radius at the base, standing on the origin.
-    const trunk = new CylinderGeometry(0.7, 1, 1, 6, 1, true)
-    trunk.translate(0, 0.5, 0)
-    const canopy = new IcosahedronGeometry(1, 1)
-    const bark = new MeshLambertMaterial()
-    bark.color.setRGB(TREE_TRUNK[0], TREE_TRUNK[1], TREE_TRUNK[2])
-    // White base colour: each instance tints it with its own leaf colour.
-    const leaves = new MeshLambertMaterial({ flatShading: true })
-    return { trunk, canopy, bark, leaves }
-  }, [])
+  const assets = useMemo(
+    () => ({
+      chunks: chunks.map((chunk) => ({
+        key: `${chunk.cx},${chunk.cz}`,
+        wood: toGeometry(chunk.wood),
+        leaves: toGeometry(chunk.leaves),
+      })),
+      bark: createFoliageMaterial({ sway: false }),
+      foliage: createFoliageMaterial(),
+    }),
+    [chunks],
+  )
 
   useEffect(
     () => () => {
-      assets.trunk.dispose()
-      assets.canopy.dispose()
+      for (const chunk of assets.chunks) {
+        chunk.wood.dispose()
+        chunk.leaves.dispose()
+      }
       assets.bark.dispose()
-      assets.leaves.dispose()
+      assets.foliage.dispose()
     },
     [assets],
   )
 
-  useLayoutEffect(() => {
-    const trunkMesh = trunks.current
-    const canopyMesh = canopies.current
-    if (!trunkMesh || !canopyMesh) return
-
-    const matrix = new Matrix4()
-    const position = new Vector3()
-    const rotation = new Quaternion()
-    const size = new Vector3()
-    const colour = new Color()
-
-    for (let i = 0; i < count; i++) {
-      const o = i * TREE_STRIDE
-      const x = trees[o]
-      const z = trees[o + 1]
-      const height = trees[o + 2]
-      const radius = trees[o + 3]
-      rotation.setFromAxisAngle(UP, trees[o + 7])
-
-      const umbrella = hash01(i, 71) < 0.33
-      // Canopy height as a share of its width: flat for acacias, rounder for the rest.
-      const depth = radius * (umbrella ? 0.42 : 0.78 + hash01(i, 72) * 0.25)
-      const canopyY = height - depth * 0.8
-
-      const r = trunkRadius(height)
-      matrix.compose(position.set(x, 0, z), rotation, size.set(r, canopyY, r))
-      trunkMesh.setMatrixAt(i, matrix)
-
-      matrix.compose(position.set(x, canopyY, z), rotation, size.set(radius, depth, radius))
-      canopyMesh.setMatrixAt(i, matrix)
-      canopyMesh.setColorAt(i, colour.setRGB(trees[o + 4], trees[o + 5], trees[o + 6]))
-    }
-
-    trunkMesh.instanceMatrix.needsUpdate = true
-    canopyMesh.instanceMatrix.needsUpdate = true
-    if (canopyMesh.instanceColor) canopyMesh.instanceColor.needsUpdate = true
-    // Instanced meshes are culled as a whole; give three the real extent.
-    trunkMesh.computeBoundingSphere()
-    canopyMesh.computeBoundingSphere()
-  }, [trees, count])
+  // The wind moves while the city is alive, and stops dead when the game is paused. It
+  // blows harder in the rain.
+  useFrame((_, delta) => {
+    if (phase !== 'playing' && phase !== 'menu') return
+    foliageUniforms.uTime.value += Math.min(delta, 0.05)
+    foliageUniforms.uWind.value = 0.55 + runtime.rain * 0.9
+  })
 
   // Trunks are solid; canopies are not, so you can walk under any tree.
   useStaticColliders(
     (rapier) => {
       const colliders = []
-      for (let o = 0; o < trees.length; o += TREE_STRIDE) {
+      for (let i = 0; i < count; i++) {
+        const o = i * TREE_STRIDE
         const r = trunkRadius(trees[o + 2]) * 0.9
         colliders.push(
           rapier.ColliderDesc.cylinder(1.5, r).setTranslation(trees[o], 1.5, trees[o + 1]),
@@ -102,24 +81,18 @@ export function Trees({ trees }: { trees: Float32Array }) {
       }
       return colliders
     },
-    [trees],
+    [trees, count],
   )
 
   if (count === 0) return null
   return (
     <group name="trees">
-      <instancedMesh
-        ref={trunks}
-        args={[assets.trunk, assets.bark, count]}
-        castShadow
-        receiveShadow
-      />
-      <instancedMesh
-        ref={canopies}
-        args={[assets.canopy, assets.leaves, count]}
-        castShadow
-        receiveShadow
-      />
+      {assets.chunks.map((chunk) => (
+        <group key={chunk.key}>
+          <mesh geometry={chunk.wood} material={assets.bark} castShadow receiveShadow />
+          <mesh geometry={chunk.leaves} material={assets.foliage} castShadow receiveShadow />
+        </group>
+      ))}
     </group>
   )
 }
