@@ -203,7 +203,10 @@ ground. To add a district, see "Adding a zone" in [`docs/DATA.md`](docs/DATA.md)
 ## Deploying
 
 It is a static site: `npm run build` and host the `dist/` folder anywhere.
-[`vercel.json`](vercel.json) is set up for Vercel:
+[`vercel.json`](vercel.json) is set up for Vercel, and the project on Vercel
+(`kanairo`) builds `main` on every push: whatever is on `main` is what
+<https://playkanairo.vercel.app> serves. Nothing is deployed from a feature
+branch except as an SSO-protected preview.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/wambetebenjamin/NairobLife)
 
