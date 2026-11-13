@@ -222,6 +222,8 @@ looking:
   deck and down again, and then steered hard into the crash barriers, which must hold;
 - that no vehicle is parked inside a building, a tree or another vehicle, and that every
   named stage has a matatu;
+- that no tree stands in a carriageway or inside a building, including the few hundred the
+  map places individually -- some of those nodes sit in the street beside them;
 - the player's own legs, against Rapier's character controller set up exactly as
   `Player.tsx` sets it up: a kerb up to 0.5 m is stepped over, and a loading dock is a
   wall. Measured, the real limit is about 0.51 m for the configured 0.45 m, because

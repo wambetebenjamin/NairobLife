@@ -145,7 +145,10 @@ export function scatterTrees(zone: ZoneFile): Float32Array {
   for (let i = 0; i < zone.trees.length; i += 2) {
     const x = zone.trees[i] / q
     const z = zone.trees[i + 1] / q
-    if (!tooClose(x, z)) plant(x, z, i + 1, false)
+    // Mapped positions are trusted, but not blindly: OpenStreetMap has a few street trees
+    // whose node sits in the middle of the carriageway next to them, and a trunk growing out
+    // of a traffic lane looks like a bug in this game rather than in the map.
+    if (!tooClose(x, z) && !blocked(x, z)) plant(x, z, i + 1, false)
   }
 
   zone.areas.forEach((area, index) => {

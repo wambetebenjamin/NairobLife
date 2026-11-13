@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadBakedZone } from '../../testing/zoneFixture'
+import { ZoneIndex } from '../zone/zoneIndex'
+import { DRIVABLE } from '../zone/format'
 import {
   TREE_CHUNK,
   TREE_STRIDE,
@@ -235,5 +237,38 @@ describe('tree chunks', () => {
       for (let f = 0; f < TREE_STRIDE; f++)
         expect(packed[i * TREE_STRIDE + f]).toBe(trees[index * TREE_STRIDE + f])
     })
+  })
+})
+
+describe('trees that the map puts in the road', () => {
+  const zone = loadBakedZone()
+  const index = new ZoneIndex(zone)
+  const trees = scatterTrees(zone)
+
+  it('never plants a trunk in a carriageway or inside a building', () => {
+    // The map has 271 individually mapped trees. A handful of their nodes sit in the middle
+    // of the street beside them, and one inside a building -- a trunk growing out of a
+    // traffic lane reads as a bug in the game, not in the map. Scattered park trees were
+    // already checked against both; the mapped ones were only checked against each other.
+    let standing = 0
+    for (let i = 0; i < trees.length; i += TREE_STRIDE) {
+      const x = trees[i]
+      const z = trees[i + 1]
+      standing++
+      expect(index.buildingAt(x, z), `a tree at ${x}, ${z}`).toBeUndefined()
+      index.roadsNear(x, z, 1, ({ ax, az, bx, bz, road }) => {
+        if (!DRIVABLE[road.k] || road.e) return
+        const dx = bx - ax
+        const dz = bz - az
+        const lengthSq = dx * dx + dz * dz
+        const t = lengthSq
+          ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / lengthSq))
+          : 0
+        const distance = Math.hypot(x - (ax + dx * t), z - (az + dz * t))
+        expect(distance, `a tree at ${x}, ${z}`).toBeGreaterThanOrEqual(road.w / 2)
+      })
+    }
+    // Still a full avenue's worth of trees: this rejects a few, it does not clear the map.
+    expect(standing).toBeGreaterThan(2200)
   })
 })
