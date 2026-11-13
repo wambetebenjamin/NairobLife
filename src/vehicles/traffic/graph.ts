@@ -89,6 +89,8 @@ export interface TrafficAgent {
   respawn?: boolean
   /** Decorative police patrol; same traffic rules, no pursuit or law enforcement. */
   patrol?: boolean
+  /** One-shot: this matatu has just arrived at a stage and should sound its horn. */
+  horn?: boolean
 }
 
 export function makeTraffic(
@@ -167,6 +169,8 @@ export function stepTraffic(
       agent.progress = edge.length * 0.5
       agent.stopped = true
       agent.wait = stageWait
+      // A matatu that has just pulled up at a stage lets everyone know, once.
+      agent.horn = true
       return
     }
     const dist = edge.length - agent.progress

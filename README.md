@@ -41,6 +41,9 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 - **Ambient traffic**: cars, matatus and bodas drive the road graph, stop at the line for
   each other at crossings, obey the mapped signals, and pause at the stages. It is a
   stylised prototype, not a full simulation; see the roadmap for what is still missing.
+- **Sound made in the browser**: the nearest vehicles get engine notes panned to where
+  they are, and matatus sound their horns pulling into stages. No audio files: every
+  sound is synthesised. Volume and mute in Settings.
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
   real latitude and longitude, a speedometer, and the current real-world Nairobi time.
   The separate game clock controls the day/night cycle.
@@ -48,7 +51,7 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
   the wheel.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
-What is _not_ here yet: a full traffic simulation, interactive pedestrians, sound,
+What is _not_ here yet: a full traffic simulation, interactive pedestrians, sound on foot,
 multiplayer. See the [roadmap](docs/ROADMAP.md).
 
 ## Run it
@@ -185,9 +188,8 @@ ground. To add a district, see "Adding a zone" in [`docs/DATA.md`](docs/DATA.md)
 - **The ground is flat.** The real CBD drops about 30 m from Upper Hill to the river.
 - **Landmarks are approximate.** KICC, Times Tower and Parliament have hand-tuned
   details based on reference footage, not surveyed models. Jamia Mosque still has no domes.
-- **Driving is arcade, not simulation.** Vehicles cannot roll over, take no damage and
-  make no sound. Kerbs are painted lines, not steps. Nothing else moves yet: every other
-  vehicle is parked.
+- **Driving is arcade, not simulation.** Vehicles cannot roll over and take no damage, and
+  the one you drive has no engine sound of its own. Kerbs are painted lines, not steps.
 - **No speed bumps**, although Nairobi has plenty: the map data has none for the CBD.
 - **Tested in headless Chrome only.** It has not yet been played on a real phone, in
   Safari or in Firefox, or with a real graphics card, so the frame rate on real devices is

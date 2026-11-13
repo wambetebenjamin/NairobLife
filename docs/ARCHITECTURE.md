@@ -41,17 +41,18 @@ a mirrored city still looks like a city.
 
 ## Run-time layers
 
-| Folder         | Role                                                                   | Imports from                                |
-| -------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
-| `src/core`     | Maths, geometry, projection. No DOM, no three.js.                      | nothing                                     |
-| `src/config`   | Tunables and content: speeds, landmarks, zones, key bindings, UI text. | `core`                                      |
-| `src/state`    | `gameStore` (UI state, Zustand) and `runtime` (per-frame state).       | `config` (and one type from `world`)        |
-| `src/input`    | Keyboard, mouse and touch folded into one input state.                 | `config`                                    |
-| `src/world`    | The city: zone format, mesh builders, materials, sky, collision.       | `core`, `config`, `state`                   |
-| `src/vehicles` | The driving model, the fleet, where vehicles park, how they are drawn. | `core`, `config`, `state`, `input`, `world` |
-| `src/player`   | Character controller, character model, camera.                         | all of the above                            |
-| `src/game`     | Actions (start, pause, teleport, cycle settings) and world loading.    | all of the above                            |
-| `src/ui`       | React DOM: menus, HUD, minimap, touch controls.                        | all of the above                            |
+| Folder         | Role                                                                      | Imports from                                |
+| -------------- | ------------------------------------------------------------------------- | ------------------------------------------- |
+| `src/core`     | Maths, geometry, projection. No DOM, no three.js.                         | nothing                                     |
+| `src/config`   | Tunables and content: speeds, landmarks, zones, key bindings, UI text.    | `core`                                      |
+| `src/state`    | `gameStore` (UI state, Zustand) and `runtime` (per-frame state).          | `config` (and one type from `world`)        |
+| `src/input`    | Keyboard, mouse and touch folded into one input state.                    | `config`                                    |
+| `src/audio`    | Synthesised city sound: engine voices, horns, and where they are.         | `state`                                     |
+| `src/world`    | The city: zone format, mesh builders, materials, sky, weather, collision. | `core`, `config`, `state`, `audio`          |
+| `src/vehicles` | The driving model, the fleet, where vehicles park, how they are drawn.    | `core`, `config`, `state`, `input`, `world` |
+| `src/player`   | Character controller, character model, camera.                            | all of the above                            |
+| `src/game`     | Actions (start, pause, teleport, cycle settings) and world loading.       | all of the above                            |
+| `src/ui`       | React DOM: menus, HUD, minimap, touch controls.                           | all of the above                            |
 
 Imports only point up this table, never down. `src/core` and `src/config` know nothing
 about three.js or React, and nothing imports from `src/ui`. `src/layers.test.ts` fails if

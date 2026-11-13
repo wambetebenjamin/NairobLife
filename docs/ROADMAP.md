@@ -21,7 +21,8 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Replace the bootstrap map snapshot with a live OpenStreetMap download
       (`npm run osm:fetch -- nairobi-cbd`, see [DATA.md](DATA.md))
 - [ ] Play-test on real phones, Safari and Firefox
-- [ ] Sound: footsteps, city ambience
+- [ ] Sound on foot: footsteps, and the city ambience around them. Ambient traffic engines
+      and horns are in (see Phase 2).
 - [ ] Gamepad support
 
 ## Phase 2: vehicles (this version)
@@ -38,7 +39,11 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Speed bumps. The map data has none for the CBD, so they need a fresh download
       or mapping on OpenStreetMap first
 - [ ] Raised pavements with kerbs a wheel has to climb; lane lines on the flyover decks
-- [ ] Engine, tyre and horn sounds
+- [x] Engine and horn sounds, synthesised in the browser rather than sampled: the nearest
+      few ambient vehicles get an engine note panned to where they are, and a matatu
+      sounds its horn as it pulls up at a stage. Volume and mute are in Settings, and
+      nothing starts until the player's first click. Tyre and road noise, and everything
+      on foot, are still missing.
 - [ ] Damage, and vehicles that can roll over (they cannot yet, so there is nothing to
       flip upright)
 - [ ] Detailed hand-painted matatu art and readable name and route boards

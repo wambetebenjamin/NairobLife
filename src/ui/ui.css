@@ -471,6 +471,12 @@ kbd {
   font-size: 12px;
 }
 
+.setting__pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .setting__control input[type='range'] {
   width: 190px;
   accent-color: var(--accent);

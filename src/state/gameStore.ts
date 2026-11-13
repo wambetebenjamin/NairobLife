@@ -41,6 +41,9 @@ export interface Settings {
   invertY: boolean
   showHud: boolean
   showControls: boolean
+  /** Master volume, 0..1. Sound is off at 0 and can be muted outright. */
+  volume: number
+  muted: boolean
   cameraMode: CameraMode
 }
 
@@ -55,6 +58,9 @@ const DEFAULT_SETTINGS: Settings = {
   invertY: false,
   showHud: true,
   showControls: true,
+  // Quiet by default: a city is loud, and a browser game that shouts on load is worse.
+  volume: 0.6,
+  muted: false,
   cameraMode: 'third',
 }
 
