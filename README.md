@@ -215,6 +215,8 @@ phases will use.
 
 Automatic checks on pull requests are written but not switched on yet:
 [`docs/ci/github-actions-ci.yml`](docs/ci/github-actions-ci.yml) says how to enable them.
+Enabling it needs a token with the `workflows` permission, which agent sessions do not
+have; a person with the repository's own credentials can move the file in three commands.
 
 ## Credits
 
