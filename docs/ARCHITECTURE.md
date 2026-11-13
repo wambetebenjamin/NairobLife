@@ -103,7 +103,8 @@ Set with `useFrame` priorities in `GameCanvas.tsx`. Lower numbers run first.
 - **The ground** is one large plane plus a single "decal" mesh of roads, pavements, parks
   and water, painted in a fixed order so layers never flicker against each other.
 - **Raised roads** (flyovers, footbridges, the Expressway) are real geometry with ramps,
-  piers and collision.
+  piers and collision. The decks are painted with the same lane rules as the streets
+  below them, which the street painter cannot do because it skips anything with a height.
 - **Sky and light** come from `skyModel.ts`, a small hand-tuned model keyed off the sun's
   height. Fog colour equals the sky's horizon colour, which is what makes the distance
   fade out instead of stopping.
@@ -240,7 +241,7 @@ Search the code for `TODO(` followed by a topic:
 | Pedestrians         | `world/pedestrians/`                                | Ambient walkers; interaction remains future work       |
 | Pedestrian bodies   | `world/pedestrians/body.ts`, `figures.ts`           | Proportions, gait and part geometry, checked by tests  |
 | Landmark models     | `world/geometry/landmarks.ts`                       | The five hand-built icons; add more to `LANDMARKS`     |
-| `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs; lane lines on the flyover decks          |
+| `TODO(roads)`       | `geometry/ground.ts`, `geometry/raisedRoads.ts`     | Raised kerbs                                           |
 | `TODO(multiplayer)` | `vehicles/fleet.ts`, `MainMenu.tsx`                 | What a server would send for the vehicles              |
 | `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback  |
 | `TODO(terrain)`     | `Ground.tsx`, `config/zones.ts`                     | Height field under the decals                          |
