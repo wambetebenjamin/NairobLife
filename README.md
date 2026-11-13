@@ -52,8 +52,8 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
   real latitude and longitude, a speedometer, and the current real-world Nairobi time.
   The separate game clock controls the day/night cycle.
-- **Keyboard and mouse, or touch.** Third-person and first-person cameras, on foot and at
-  the wheel.
+- **Keyboard and mouse, touch, or a controller.** Third-person and first-person cameras,
+  on foot and at the wheel. A standard-layout gamepad works without any setup.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
 What is _not_ here yet: a full traffic simulation, interactive pedestrians, multiplayer.

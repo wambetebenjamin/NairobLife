@@ -242,6 +242,17 @@ function onTap(action: TapAction): void {
   }
 }
 
+/**
+ * The pause toggle, shared by Escape and by a controller's Start button. Escape's own
+ * handler cannot be reused: the browser keeps the key while the pointer is locked.
+ */
+export function togglePause(): void {
+  const state = game()
+  if (state.teleportOpen) closeTeleport()
+  else if (state.phase === 'playing') pauseGame()
+  else if (state.phase === 'paused' && !state.settingsOpen) resumeGame()
+}
+
 function onEscape(event: KeyboardEvent): void {
   if (event.code !== 'Escape') return
   // While the mouse is locked the browser keeps Esc for itself and we hear about it
@@ -280,6 +291,10 @@ export function attachGame(element: HTMLCanvasElement): () => void {
     },
   })
   const offTap = input.onTap(onTap)
+  // A controller's Start button pauses and resumes, since a pad has no Escape key.
+  const offMenu = input.onMenu((action) => {
+    if (action === 'pause') togglePause()
+  })
   window.addEventListener('keydown', onEscape)
 
   // Gameplay input counts only while actually playing with no menu on top.
@@ -302,6 +317,7 @@ export function attachGame(element: HTMLCanvasElement): () => void {
     detachKeyboard()
     detachPointer()
     offTap()
+    offMenu()
     unsubscribe()
     window.removeEventListener('keydown', onEscape)
     window.removeEventListener('touchstart', onTouch)

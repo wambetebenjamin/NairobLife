@@ -5,7 +5,8 @@
  * Codes are KeyboardEvent.code values: physical keys, so WASD stays WASD on AZERTY.
  * Ctrl is deliberately unused: Ctrl+W closes the tab even while the pointer is locked.
  *
- * TODO(gamepad): map a standard gamepad onto the same actions.
+ * A connected controller is decoded in `input/gamepad.ts` and written into the same state,
+ * so nothing downstream knows which device the player is using.
  */
 
 export type HeldAction = 'forward' | 'back' | 'left' | 'right' | 'sprint' | 'crouch' | 'jump'
@@ -38,6 +39,12 @@ export const HELD_KEYS: Record<string, HeldAction> = {
   KeyC: 'crouch',
   Space: 'jump',
 }
+
+/**
+ * Actions that work the menu as well as the game, so they are not `TapAction`s: a pause
+ * that only worked while playing could never resume.
+ */
+export type MenuAction = 'pause'
 
 export const TAP_KEYS: Record<string, TapAction> = {
   KeyT: 'teleport',
@@ -77,6 +84,7 @@ export const CONTROLS_HELP: readonly ControlsRow[] = [
   { keys: ['G'], label: 'Graphics' },
   { keys: ['H'], label: 'Hide HUD' },
   { keys: ['Esc'], label: 'Pause' },
+  { keys: ['Pad'], label: 'Controller' },
 ]
 
 /** The same keys at the wheel: what the HUD shows instead while driving. */

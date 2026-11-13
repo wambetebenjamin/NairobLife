@@ -27,7 +27,14 @@ Phase 3 is in progress. Later phases are plans, not promises.
       surface is inferred from the mapped road under the player, and the bed's level from
       that road's width and the distance to the nearest stage — it is an atmospheric bed,
       not a measurement of real traffic volume.
-- [ ] Gamepad support
+- [x] Gamepad support. A standard-layout controller is polled each frame and folded into
+      the same input state as the keyboard, so the player, camera and vehicles need no
+      changes: left stick moves, right stick looks, A jumps, B sprints, X crouches, Y gets
+      in and out of a car, D-pad up opens the map, Start pauses and resumes. Sticks get a
+      dead zone and a shaping curve rather than being read raw; a pad with no right stick
+      can still turn with the D-pad. Not tested on real hardware — the decoding is covered
+      by tests, but the mapping is the browser's standard one and a physical controller has
+      not been held.
 
 ## Phase 2: vehicles (this version)
 
