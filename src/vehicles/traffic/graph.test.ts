@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { VEHICLES } from '../../config/vehicles'
 import { orientedRectsOverlap } from '../../core/geom2d'
 import { loadBakedZone } from '../../testing/zoneFixture'
+import { ZoneIndex } from '../../world/zone/zoneIndex'
 import {
   buildRoadGraph,
   makeTraffic,
@@ -108,6 +109,39 @@ describe('ambient traffic graph', () => {
             `vehicles ${i} and ${j} overlap near (${start.x}, ${start.z})`,
           ).toBe(false)
     }
+  })
+  it('never starts a vehicle inside a building', () => {
+    // The road graph is built from the map's drawn geometry. Where a street is drawn
+    // through a building -- which happens 19 times in the CBD -- the graph has an edge that
+    // is not drivable in the real world. Parked vehicles were already checked against the
+    // buildings; traffic spawns were not, and about one in a hundred landed inside one.
+    const real = buildRoadGraph(fixture)
+    const index = new ZoneIndex(fixture)
+    const buildingAt = (x: number, z: number) => index.buildingAt(x, z)
+    let checked = 0
+    for (let x = -1400; x <= 1400; x += 700)
+      for (let z = -1400; z <= 1400; z += 700) {
+        for (const agent of makeTraffic(real, { x, z }, 65, buildingAt)) {
+          const pose = trafficPose(real.edges[agent.edge], agent.progress)
+          checked++
+          expect(
+            buildingAt(pose.x, pose.z),
+            `a ${agent.kind} at ${pose.x}, ${pose.z}`,
+          ).toBeUndefined()
+        }
+      }
+    expect(checked).toBeGreaterThan(400)
+  })
+  it('still fills the city once buildings are being avoided', () => {
+    // Rejecting a spawn must not thin the traffic out: every start gets its full complement.
+    const real = buildRoadGraph(fixture)
+    const index = new ZoneIndex(fixture)
+    for (let x = -1400; x <= 1400; x += 700)
+      for (let z = -1400; z <= 1400; z += 700) {
+        expect(makeTraffic(real, { x, z }, 65, (px, pz) => index.buildingAt(px, pz))).toHaveLength(
+          65,
+        )
+      }
   })
   it('stops matatus at stages, waits, and resumes; bodas do not stop', () => {
     const matatu = agent('matatu')

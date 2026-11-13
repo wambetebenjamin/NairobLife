@@ -60,7 +60,7 @@ export function Traffic({ zone, start }: { zone: LoadedZone; start: { x: number;
   const group = useRef<import('three').Group>(null)
   const scene = useMemo(() => {
     const graph = buildRoadGraph(zone.file)
-    const agents = makeTraffic(graph, start)
+    const agents = makeTraffic(graph, start, undefined, (x, z) => zone.index.buildingAt(x, z))
     const crossings = crossingsFor(zone)
     const signalised = signalCrossings(zone.file, graph, crossings)
     const simulation = new TrafficSimulation(graph, agents, { signalised })

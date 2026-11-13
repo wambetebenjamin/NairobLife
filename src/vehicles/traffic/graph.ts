@@ -98,6 +98,11 @@ export function makeTraffic(
   graph: RoadGraph,
   start: { x: number; z: number },
   limit = 65,
+  /**
+   * Buildings, if the caller has them. A street that the map draws through a building is
+   * not a street a car can start on, and the graph is built from the map's geometry alone.
+   */
+  buildingAt?: (x: number, z: number) => unknown,
 ): TrafficAgent[] {
   const long = graph.edges.map((edge, id) => ({ edge, id })).filter(({ edge }) => edge.length >= 22)
   const distance = ({ edge }: (typeof long)[number]) =>
@@ -144,6 +149,9 @@ export function makeTraffic(
       halfLength: spec.length / 2,
       halfWidth: spec.width / 2,
     }
+    // A street drawn through a building is not a street. Measured over the CBD, about one
+    // spawn in a hundred landed inside one before this check.
+    if (buildingAt && buildingAt(pose.x, pose.z)) continue
     // A small margin, because two bumpers touching is already too close at a standstill.
     if (placed.some((other) => orientedRectsOverlap(body, other, 1.2))) continue
     placed.push(body)
