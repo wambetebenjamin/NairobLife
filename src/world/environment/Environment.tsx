@@ -13,8 +13,11 @@ import { TIME } from '../../config/game'
 import { useGame, useQuality } from '../../state/gameStore'
 import { runtime } from '../../state/runtime'
 import { facadeUniforms } from '../materials/buildingMaterial'
+import { wetUniforms } from '../materials/groundMaterials'
+import { Rain } from './Rain'
 import { Sky } from './Sky'
 import { computeSky, createSkyState } from './skyModel'
+import { computeWeather, createWeatherState } from './weather'
 
 const HOURS_PER_SECOND = 24 / (TIME.dayLengthMinutes * 60)
 
@@ -32,6 +35,13 @@ const GLASS_GREYING = 0.45
 /** Share of windows with the lights on once it is fully dark. */
 const LIT_WINDOWS = 0.4
 
+/**
+ * The real date at load, which decides whether it is the rains or the dry season. Read
+ * once: a session that runs past midnight should not have the weather change under it,
+ * but the timestamp is cheap to keep and honest about when the session began.
+ */
+const NOW = new Date()
+
 const right = new Vector3()
 const up = new Vector3()
 const dir = new Vector3()
@@ -45,6 +55,8 @@ export function Environment() {
   const sun = useRef<DirectionalLight>(null)
   const hemisphere = useRef<HemisphereLight>(null)
   const sky = useMemo(() => createSkyState(), [])
+  const weather = useMemo(() => createWeatherState(), [])
+  const weatherSetting = useGame((state) => state.settings.weather)
   const fog = useMemo(() => new FogExp2(0xffffff, 0.0003), [])
   const background = useMemo(() => new Color(), [])
 
@@ -73,6 +85,22 @@ export function Environment() {
       runtime.time = (runtime.time + Math.min(delta, 0.1) * HOURS_PER_SECOND + 24) % 24
     }
     computeSky(runtime.time, game.settings.haze, sky)
+    computeWeather(NOW, runtime.time, weatherSetting, weather)
+    // Rain dims the sun and flattens the sky: the skydome reads the result, so the two
+    // never disagree about how bright the day is.
+    for (const channel of ['zenith', 'horizon', 'hemiSky', 'hemiGround'] as const) {
+      const space = sky[channel]
+      const grey = 0.2126 * space[0] + 0.7152 * space[1] + 0.0722 * space[2]
+      for (let i = 0; i < 3; i++) space[i] += (grey - space[i]) * weather.overcast * 0.75
+    }
+    sky.lightIntensity *= weather.light
+    sky.hemiIntensity *= 0.6 + 0.4 * weather.light
+    sky.fogDensity /= Math.max(0.35, weather.visibility)
+    runtime.rain = weather.intensity
+    runtime.wetness = weather.wetness
+    // The road mirrors the sky, so it reflects whatever the horizon is doing right now.
+    wetUniforms.uWetness.value = weather.wetness
+    wetUniforms.uSky.value.setRGB(sky.horizon[0], sky.horizon[1], sky.horizon[2])
     runtime.night = sky.night
 
     fog.color.setRGB(sky.horizon[0], sky.horizon[1], sky.horizon[2])
@@ -124,6 +152,7 @@ export function Environment() {
   return (
     <>
       <Sky sky={sky} clouds={quality !== 'low'} />
+      <Rain intensity={weather.intensity} />
       <hemisphereLight ref={hemisphere} />
       {/* Remounted when quality changes so the shadow map is rebuilt at the new size. */}
       <directionalLight

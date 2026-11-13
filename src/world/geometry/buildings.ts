@@ -18,6 +18,7 @@ import earcut from 'earcut'
 import { ringCentroid } from '../../core/geom2d'
 import { hash01 } from '../../core/random'
 import type { ZoneBuilding } from '../zone/format'
+import { landmarkFor } from './landmarks'
 import {
   ROOFS_FLAT,
   ROOFS_MABATI,
@@ -263,6 +264,35 @@ function scaleRing(ring: number[], cx: number, cz: number, k: number): number[] 
 }
 
 /**
+ * Merge a hand-built landmark into the chunk, moved to its plot. The landmark's own mesh
+ * is in local metres around (0, 0); this translates it and copies the arrays in.
+ */
+function appendMesh(
+  w: Writer,
+  mesh: {
+    positions: Float32Array
+    normals: Float32Array
+    colors: Float32Array
+    uvs: Float32Array
+    facades: Float32Array
+    indices: Uint32Array
+  },
+  x: number,
+  z: number,
+): void {
+  const start = w.pos.length / 3
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    w.pos.push(mesh.positions[i] + x, mesh.positions[i + 1], mesh.positions[i + 2] + z)
+    w.nor.push(mesh.normals[i], mesh.normals[i + 1], mesh.normals[i + 2])
+    w.col.push(mesh.colors[i], mesh.colors[i + 1], mesh.colors[i + 2])
+    w.uv.push(mesh.uvs[(i / 3) * 2], mesh.uvs[(i / 3) * 2 + 1])
+    w.fac.push(mesh.facades[i], mesh.facades[i + 1], mesh.facades[i + 2])
+  }
+  for (const index of mesh.indices) w.idx.push(index + start)
+  w.count += mesh.positions.length / 3
+}
+
+/**
  * Walls around one ring, from `base` up to `top`. `topRing` is the same ring where the
  * walls end: the ring itself for straight walls, a scaled copy for walls that lean.
  * Rings with positive signed area (outer rings) get outward normals; holes are wound the
@@ -429,6 +459,19 @@ export function buildBuildingMesh(buildings: readonly ZoneBuilding[], q: number)
     const outer = toMetres(b.p)
     const holes = (b.hs ?? []).map(toMetres)
     const base = b.b ?? 0
+
+    // A landmark is built by hand instead of extruded, but only if it stands on the
+    // ground: a model floating on a mapped podium would need its own base.
+    const landmark = base < 0.5 ? landmarkFor(b.n) : undefined
+    if (landmark) {
+      const [cx, cz] = ringCentroid(outer)
+      let radius = 0
+      for (let i = 0; i < outer.length; i += 2) {
+        radius = Math.max(radius, Math.hypot(outer[i] - cx, outer[i + 1] - cz))
+      }
+      appendMesh(w, landmark.build({ x: cx, z: cz, radius, height: b.h }), cx, cz)
+      continue
+    }
     const style = styleFor(b)
     w.seed = style.seed
     w.shop = style.shop

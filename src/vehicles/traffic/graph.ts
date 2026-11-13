@@ -1,4 +1,6 @@
 /** Directed ground-level road graph and simple ambient traffic. */
+import { VEHICLES } from '../../config/vehicles'
+import { orientedRectsOverlap, type OrientedRect } from '../../core/geom2d'
 import { hash01 } from '../../core/random'
 import { DRIVABLE, type ZoneFile } from '../../world/zone/format'
 
@@ -45,6 +47,10 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
         const t = Math.max(0, Math.min(1, (px * (bx - ax) + pz * (bz - az)) / (length * length)))
         return Math.hypot(px - t * (bx - ax), pz - t * (bz - az)) < 18
       })
+      // Two ways that share a vertex but join at an angle still meet at a junction, so
+      // both directions of a two-way road arrive there. The bake stores `ow` only when a
+      // way really is one-way.
+      const oneWay = !!road.ow
       const add = (a: number, b: number, c: number, d: number, from: string, to: string) => {
         const edge: Edge = {
           ax: a,
@@ -54,7 +60,7 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
           length,
           width: road.w,
           lanes: road.ln ?? Math.max(1, Math.floor(road.w / 3.3)),
-          oneWay: !!road.ow,
+          oneWay,
           from,
           to,
           stage,
@@ -65,7 +71,7 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
         outgoing.set(from, list)
       }
       add(ax, az, bx, bz, key(x1, z1), key(x2, z2))
-      if (!road.ow) add(bx, bz, ax, az, key(x2, z2), key(x1, z1))
+      if (!oneWay) add(bx, bz, ax, az, key(x2, z2), key(x1, z1))
     }
   }
   return { edges, outgoing }
@@ -84,6 +90,8 @@ export interface TrafficAgent {
   respawn?: boolean
   /** Decorative police patrol; same traffic rules, no pursuit or law enforcement. */
   patrol?: boolean
+  /** One-shot: this matatu has just arrived at a stage and should sound its horn. */
+  horn?: boolean
 }
 
 export function makeTraffic(
@@ -102,24 +110,59 @@ export function makeTraffic(
   const rest = long
     .filter((e) => !used.has(e.id))
     .sort((a, b) => hash01(a.id, 54) - hash01(b.id, 54))
-  return [...near, ...rest].slice(0, limit).map(({ edge, id }, seed) => ({
-    edge: id,
-    progress: edge.length * (0.2 + 0.6 * hash01(seed, 5)),
-    speed: 5 + 3 * hash01(seed, 6),
-    kind:
-      seed === 2 || seed === 5 || seed === 8
-        ? 'boda'
-        : seed % 7 === 0
-          ? 'matatu'
-          : seed % 8 === 0
-            ? 'boda'
-            : 'car',
-    patrol: seed === 2 || seed === 5 || seed === 8,
-    seed,
-    wait: 0,
-    stopped: false,
-    turns: 0,
-  }))
+
+  // Ambient traffic is cars, matatus and bodas only: a nganya is a player vehicle, not
+  // something the simulation drives.
+  const kindOf = (seed: number): 'car' | 'boda' | 'matatu' =>
+    seed === 2 || seed === 5 || seed === 8
+      ? 'boda'
+      : seed % 7 === 0
+        ? 'matatu'
+        : seed % 8 === 0
+          ? 'boda'
+          : 'car'
+
+  const agents: TrafficAgent[] = []
+  // Bodies already placed, as rectangles. Two vehicles that start inside each other are
+  // stuck inside each other until one of them happens to turn off, which looks like a
+  // crash that no driver caused.
+  const placed: OrientedRect[] = []
+
+  for (const { edge, id } of [...near, ...rest]) {
+    if (agents.length >= limit) break
+    const seed = agents.length
+    const progress = edge.length * (0.2 + 0.6 * hash01(seed, 5))
+    const kind = kindOf(seed)
+    const pose = trafficPose(edge, progress)
+    const spec = VEHICLES[kind]
+    const body: OrientedRect = {
+      x: pose.x,
+      z: pose.z,
+      // The car's own forward axis: yaw 0 faces -z.
+      dx: -Math.sin(pose.yaw),
+      dz: -Math.cos(pose.yaw),
+      halfLength: spec.length / 2,
+      halfWidth: spec.width / 2,
+    }
+    // A small margin, because two bumpers touching is already too close at a standstill.
+    if (placed.some((other) => orientedRectsOverlap(body, other, 1.2))) continue
+    placed.push(body)
+    // Identities are assigned to accepted candidates, so the patrol bikes still appear if
+    // a spot was rejected; `seed` is the count of agents so far, not the candidate index.
+    agents.push({
+      edge: id,
+      progress,
+      speed: 5 + 3 * hash01(seed, 6),
+      kind,
+      // Exactly three marked patrols, always the bikes at these three seeds.
+      patrol: seed === 2 || seed === 5 || seed === 8,
+      seed,
+      wait: 0,
+      stopped: false,
+      turns: 0,
+    })
+  }
+  return agents
 }
 
 /** Left-hand lane, measured relative to direction of travel. */
@@ -141,6 +184,7 @@ export function stepTraffic(
   graph: RoadGraph,
   dt: number,
   blocked = false,
+  stageWait = 3,
 ): void {
   if (dt <= 0 || !graph.edges.length) return
   if (agent.wait > 0) {
@@ -160,7 +204,9 @@ export function stepTraffic(
     ) {
       agent.progress = edge.length * 0.5
       agent.stopped = true
-      agent.wait = 3
+      agent.wait = stageWait
+      // A matatu that has just pulled up at a stage lets everyone know, once.
+      agent.horn = true
       return
     }
     const dist = edge.length - agent.progress
@@ -184,14 +230,25 @@ export function stepTraffic(
   }
 }
 
-/** Available metres before the vehicle ahead on the same directed segment, keeping a gap.
- * This is a visual headway aid, not collision detection at junctions or across segments. */
+/** Half the length of a vehicle of this kind, in metres, from the spec table. */
+const halfLength = (kind: TrafficAgent['kind']) => VEHICLES[kind].length / 2
+
+/**
+ * Available metres before the vehicle ahead on the same directed segment. The gap kept
+ * is both vehicles' half-lengths plus a little air, so a matatu behind a boda does not
+ * shove the boda along, and two cars in a queue stand bumper to bumper rather than seven
+ * metres apart.
+ *
+ * This is a following aid along one edge, not collision detection across a junction or
+ * between two edges that run side by side.
+ */
 export function sameEdgeClearance(agent: TrafficAgent, agents: readonly TrafficAgent[]): number {
   let available = Infinity
-  const gap = agent.kind === 'matatu' ? 10 : 7
+  const gap = halfLength(agent.kind) + 2
   for (const other of agents) {
     if (other === agent || other.edge !== agent.edge || other.progress <= agent.progress) continue
-    available = Math.min(available, Math.max(0, other.progress - agent.progress - gap))
+    const keep = gap + halfLength(other.kind)
+    available = Math.min(available, Math.max(0, other.progress - agent.progress - keep))
   }
   return available
 }

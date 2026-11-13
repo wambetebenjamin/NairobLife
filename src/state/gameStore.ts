@@ -18,20 +18,32 @@ export type Phase = 'loading' | 'menu' | 'playing' | 'paused'
 
 export type Quality = 'auto' | 'high' | 'medium' | 'low'
 export type Haze = 'clear' | 'hazy' | 'dusty'
+/** Weather follows the real calendar by default: wet in the rains, dry between them. */
+export type WeatherSetting = 'season' | 'long-rains' | 'short-rains' | 'off'
 export type CameraMode = 'third' | 'first'
 
 export const QUALITY_ORDER: readonly Quality[] = ['auto', 'high', 'medium', 'low']
 export const HAZE_ORDER: readonly Haze[] = ['clear', 'hazy', 'dusty']
+export const WEATHER_ORDER: readonly WeatherSetting[] = [
+  'season',
+  'long-rains',
+  'short-rains',
+  'off',
+]
 
 export interface Settings {
   quality: Quality
   haze: Haze
+  weather: WeatherSetting
   language: Language
   /** Multiplier on look speed, 0.3 .. 3. */
   sensitivity: number
   invertY: boolean
   showHud: boolean
   showControls: boolean
+  /** Master volume, 0..1. Sound is off at 0 and can be muted outright. */
+  volume: number
+  muted: boolean
   cameraMode: CameraMode
 }
 
@@ -39,11 +51,16 @@ const DEFAULT_SETTINGS: Settings = {
   quality: 'auto',
   // Nairobi's dry seasons hang a soft haze over the city; it is also kind to the frame rate.
   haze: 'hazy',
+  // Real seasons: the long rains from late March, the short rains from late October.
+  weather: 'season',
   language: 'en',
   sensitivity: 1,
   invertY: false,
   showHud: true,
   showControls: true,
+  // Quiet by default: a city is loud, and a browser game that shouts on load is worse.
+  volume: 0.6,
+  muted: false,
   cameraMode: 'third',
 }
 

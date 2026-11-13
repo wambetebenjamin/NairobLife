@@ -8,7 +8,7 @@
 import { buildBuildingMesh } from '../geometry/buildings'
 import { buildGroundMesh } from '../geometry/ground'
 import { buildRaisedRoads } from '../geometry/raisedRoads'
-import { scatterTrees } from '../geometry/trees'
+import { buildTreeChunks, scatterTrees } from '../geometry/trees'
 import { ZONE_FORMAT_VERSION, type ZoneBuilding, type ZoneFile } from './format'
 import { CHUNK_SIZE, type BuildingChunk, type LoadRequest, type WorkerMessage } from './protocol'
 
@@ -101,13 +101,25 @@ async function load(url: string): Promise<void> {
 
   const trees = scatterTrees(file)
   transfer.push(trees.buffer)
+  post({ type: 'progress', stage: 'trees', value: 0.4 })
+  const treeChunks = buildTreeChunks(trees)
+  for (const chunk of treeChunks) {
+    for (const mesh of [chunk.wood, chunk.leaves]) {
+      transfer.push(
+        mesh.positions.buffer,
+        mesh.normals.buffer,
+        mesh.colors.buffer,
+        mesh.indices.buffer,
+      )
+    }
+  }
   post({ type: 'progress', stage: 'trees', value: 1 })
 
   post(
     {
       type: 'done',
       file,
-      geometry: { chunks, ground, raised, trees },
+      geometry: { chunks, ground, raised, trees, treeChunks },
       buildMs: performance.now() - started,
     },
     transfer,

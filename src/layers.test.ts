@@ -7,7 +7,18 @@ import { describe, expect, it } from 'vitest'
  * Not covered: the files directly in src/ (they wire the layers together), src/testing,
  * test files, and `import type` lines (types vanish when the code is built).
  */
-const LAYERS = ['core', 'config', 'state', 'input', 'world', 'vehicles', 'player', 'game', 'ui']
+const LAYERS = [
+  'core',
+  'config',
+  'state',
+  'input',
+  'audio',
+  'world',
+  'vehicles',
+  'player',
+  'game',
+  'ui',
+]
 
 /** The text of every source file under src/, keyed by path: './core/math.ts'. */
 const SOURCES = import.meta.glob<string>(['./**/*.ts', './**/*.tsx', '!./**/*.test.ts'], {

@@ -10,7 +10,7 @@ import { translate, type StringKey } from '../config/strings'
 import { attachKeyboard, input } from '../input/input'
 import { attachPointer } from '../input/pointer'
 import { resolveLandmark } from '../player/teleport'
-import { HAZE_ORDER, QUALITY_ORDER, cycle, useGame } from '../state/gameStore'
+import { HAZE_ORDER, QUALITY_ORDER, WEATHER_ORDER, cycle, useGame } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import type { RideRoute } from '../vehicles/ride/routes'
 
@@ -156,6 +156,18 @@ export function cycleQuality(): void {
   game().toast(`${t('quality')}: ${t(label[quality])}`)
 }
 
+export function cycleWeather(): void {
+  const weather = cycle(WEATHER_ORDER, game().settings.weather)
+  game().updateSettings({ weather })
+  const label = {
+    season: 'weatherSeason',
+    'long-rains': 'weatherLongRains',
+    'short-rains': 'weatherShortRains',
+    off: 'weatherOff',
+  } as const
+  game().toast(`${t('weather')}: ${t(label[weather])}`)
+}
+
 export function cycleHaze(): void {
   const haze = cycle(HAZE_ORDER, game().settings.haze)
   game().updateSettings({ haze })
@@ -214,6 +226,8 @@ function onTap(action: TapAction): void {
       return cycleQuality()
     case 'haze':
       return cycleHaze()
+    case 'weather':
+      return cycleWeather()
     case 'timeBack':
       return shiftTime(-1)
     case 'timeForward':
@@ -226,6 +240,17 @@ function onTap(action: TapAction): void {
       // TODO(gameplay): reserved for a scan/ping ability in later modes.
       return
   }
+}
+
+/**
+ * The pause toggle, shared by Escape and by a controller's Start button. Escape's own
+ * handler cannot be reused: the browser keeps the key while the pointer is locked.
+ */
+export function togglePause(): void {
+  const state = game()
+  if (state.teleportOpen) closeTeleport()
+  else if (state.phase === 'playing') pauseGame()
+  else if (state.phase === 'paused' && !state.settingsOpen) resumeGame()
 }
 
 function onEscape(event: KeyboardEvent): void {
@@ -266,6 +291,10 @@ export function attachGame(element: HTMLCanvasElement): () => void {
     },
   })
   const offTap = input.onTap(onTap)
+  // A controller's Start button pauses and resumes, since a pad has no Escape key.
+  const offMenu = input.onMenu((action) => {
+    if (action === 'pause') togglePause()
+  })
   window.addEventListener('keydown', onEscape)
 
   // Gameplay input counts only while actually playing with no menu on top.
@@ -288,6 +317,7 @@ export function attachGame(element: HTMLCanvasElement): () => void {
     detachKeyboard()
     detachPointer()
     offTap()
+    offMenu()
     unsubscribe()
     window.removeEventListener('keydown', onEscape)
     window.removeEventListener('touchstart', onTouch)

@@ -1,5 +1,11 @@
 import { LANGUAGES, type StringKey } from '../config/strings'
-import { useGame, type Haze, type Quality, type Settings } from '../state/gameStore'
+import {
+  useGame,
+  type Haze,
+  type Quality,
+  type Settings,
+  type WeatherSetting,
+} from '../state/gameStore'
 import { CloseIcon } from './icons'
 import { useT } from './useT'
 
@@ -8,6 +14,13 @@ const QUALITY: { id: Quality; label: StringKey }[] = [
   { id: 'high', label: 'qualityHigh' },
   { id: 'medium', label: 'qualityMedium' },
   { id: 'low', label: 'qualityLow' },
+]
+
+const WEATHER: { id: WeatherSetting; label: StringKey }[] = [
+  { id: 'season', label: 'weatherSeason' },
+  { id: 'long-rains', label: 'weatherLongRains' },
+  { id: 'short-rains', label: 'weatherShortRains' },
+  { id: 'off', label: 'weatherOff' },
 ]
 
 const HAZE: { id: Haze; label: StringKey }[] = [
@@ -62,6 +75,13 @@ export function SettingsPanel() {
             onChange={(haze) => update({ haze })}
           />
         </Row>
+        <Row label={t('weather')} note="Nairobi's rains, by the real calendar">
+          <Segmented
+            options={WEATHER.map((option) => ({ id: option.id, label: t(option.label) }))}
+            value={settings.weather}
+            onChange={(weather) => update({ weather })}
+          />
+        </Row>
         <Row label="Camera">
           <Segmented<Settings['cameraMode']>
             options={[
@@ -88,6 +108,23 @@ export function SettingsPanel() {
             value={settings.sensitivity}
             onChange={(event) => update({ sensitivity: Number(event.target.value) })}
           />
+        </Row>
+        <Row
+          label={t('volume')}
+          note={settings.muted ? t('soundOff') : `${Math.round(settings.volume * 100)}%`}
+        >
+          <div className="setting__pair">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.volume}
+              aria-label={t('volume')}
+              onChange={(event) => update({ volume: Number(event.target.value) })}
+            />
+            <Toggle checked={!settings.muted} onChange={(on) => update({ muted: !on })} />
+          </div>
         </Row>
         <Row label={t('invertY')}>
           <Toggle checked={settings.invertY} onChange={(invertY) => update({ invertY })} />

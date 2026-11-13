@@ -5,7 +5,7 @@
 **Play it: <https://playkanairo.vercel.app>**
 
 kaNAIRO is an open-world game set in a 3D Nairobi built from real map data. This is
-**Phase 2**: you explore the Central Business District on foot, or at the wheel of a car,
+**Phase 3**: you explore the Central Business District on foot, or at the wheel of a car,
 a boda boda, a 14-seat matatu or a larger nganya. Streets and most building footprints
 come from [OpenStreetMap](https://www.openstreetmap.org), so Kenyatta Avenue is where Kenyatta
 Avenue is, and KICC stands 105 m over City Square.
@@ -32,17 +32,32 @@ code, art and data pipeline here are original. See [`docs/reference`](docs/refer
 - **16 teleports** to landmarks, including the KICC helipad.
 - **A day that passes**: 24 real minutes per game day, with dusk, lit windows at night, and
   a haze setting for the dry season.
-- **Ambient pedestrians** walk on pavements and around City Square. They are visual-only
-  and do not interact or collide yet.
+- **The rains**: wet-season weather follows the real calendar, so a November visit tends
+  to be wet. Overcast skies, darker wet tarmac that mirrors the sky, and a rain field
+  that follows the camera. It can be forced or turned off in Settings, or cycled with
+  `N`.
+- **Ambient pedestrians** are articulated figures, not boxes: tapered torsos, a neck and
+  head with a face, arms with elbows and hands, legs with knees and feet that land on the
+  pavement. Each person's height, build, skin, hair and clothes come from their own seed;
+  they walk with a real gait or stand and fidget, at street level and around City Square.
+  They are visual-only and do not interact or collide yet.
+- **Ambient traffic**: cars, matatus and bodas drive the road graph, stop at the line for
+  each other at crossings, obey the mapped signals, and pause at the stages. It is a
+  stylised prototype, not a full simulation; see the roadmap for what is still missing.
+- **Sound made in the browser**: the nearest vehicles get engine notes panned to where
+  they are, matatus sound their horns pulling into stages, your own feet fall on whatever
+  is under them — tarmac, paving slabs, gravel — and a low wash of distant traffic sits
+  under all of it, louder beside a big road or near a stage. No audio files: every sound is
+  synthesised. Volume and mute in Settings.
 - **A HUD that knows where you are**: street name, district, radar, compass heading, your
   real latitude and longitude, a speedometer, and the current real-world Nairobi time.
   The separate game clock controls the day/night cycle.
-- **Keyboard and mouse, or touch.** Third-person and first-person cameras, on foot and at
-  the wheel.
+- **Keyboard and mouse, touch, or a controller.** Third-person and first-person cameras,
+  on foot and at the wheel. A standard-layout gamepad works without any setup.
 - **Runs on modest hardware**: quality drops by itself if the frame rate struggles.
 
-What is _not_ here yet: traffic, interactive pedestrians, sound, multiplayer. They are planned, in
-that order. See the [roadmap](docs/ROADMAP.md).
+What is _not_ here yet: a full traffic simulation, interactive pedestrians, multiplayer.
+See the [roadmap](docs/ROADMAP.md).
 
 ## Run it
 
@@ -88,6 +103,7 @@ The arrow keys work in place of `W A S D`.
 | `V`         | Third person / first person   |
 | `[` and `]` | Move the clock back / forward |
 | `L`         | Haze: clear, hazy, dusty      |
+| `N`         | Weather: season, rains, dry   |
 | `G`         | Graphics quality              |
 | `H`         | Hide the HUD                  |
 | `K`         | Fullscreen                    |
@@ -177,9 +193,8 @@ ground. To add a district, see "Adding a zone" in [`docs/DATA.md`](docs/DATA.md)
 - **The ground is flat.** The real CBD drops about 30 m from Upper Hill to the river.
 - **Landmarks are approximate.** KICC, Times Tower and Parliament have hand-tuned
   details based on reference footage, not surveyed models. Jamia Mosque still has no domes.
-- **Driving is arcade, not simulation.** Vehicles cannot roll over, take no damage and
-  make no sound. Kerbs are painted lines, not steps. Nothing else moves yet: every other
-  vehicle is parked.
+- **Driving is arcade, not simulation.** Vehicles cannot roll over and take no damage, and
+  the one you drive has no engine sound of its own. Kerbs are painted lines, not steps.
 - **No speed bumps**, although Nairobi has plenty: the map data has none for the CBD.
 - **Tested in headless Chrome only.** It has not yet been played on a real phone, in
   Safari or in Firefox, or with a real graphics card, so the frame rate on real devices is

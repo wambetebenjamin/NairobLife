@@ -8,13 +8,35 @@
  * The same keys mean different things on foot and at the wheel (Space jumps, or pulls
  * the handbrake). This file does not know which; whoever reads it does.
  */
-import { HELD_KEYS, TAP_KEYS, type HeldAction, type TapAction } from '../config/controls'
+import {
+  HELD_KEYS,
+  TAP_KEYS,
+  type HeldAction,
+  type MenuAction,
+  type TapAction,
+} from '../config/controls'
 
 const held = new Set<HeldAction>()
 const pressedCodes = new Set<string>()
 
 /** Analogue values pushed in by the on-screen controls. */
 const touch = { x: 0, y: 0, sprint: false, crouch: false, jump: false }
+
+/**
+ * Values pushed in by a controller. Kept apart from `touch` rather than summed with it:
+ * a pad and a thumb on the glass are two people, and blending them is a bug you can only
+ * find with two hands, which is exactly what nobody does while testing.
+ */
+const pad = {
+  active: false,
+  x: 0,
+  y: 0,
+  sprint: false,
+  crouch: false,
+  jump: false,
+  lookX: 0,
+  lookY: 0,
+}
 
 let lookX = 0
 let lookY = 0
@@ -23,13 +45,14 @@ let jumpQueued = false
 let enabled = false
 
 const tapListeners = new Set<(action: TapAction) => void>()
+const menuListeners = new Set<(action: MenuAction) => void>()
 
 export const input = {
   /** Strafe (-1 left .. 1 right) and forward (-1 back .. 1 forward). Length never exceeds 1. */
   move(): { x: number; y: number } {
     if (!enabled) return ZERO
-    let x = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) + touch.x
-    let y = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0) + touch.y
+    let x = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) + touch.x + pad.x
+    let y = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0) + touch.y + pad.y
     const len = Math.hypot(x, y)
     if (len > 1) {
       x /= len
@@ -45,8 +68,8 @@ export const input = {
    */
   drive(): { steer: number; throttle: number } {
     if (!enabled) return PARKED
-    let x = touch.x
-    let y = touch.y
+    let x = touch.x + pad.x
+    let y = touch.y + pad.y
     // A thumb stick moves in a circle; stretch it to a square so the diagonals reach
     // full throttle and full lock together, as two keys do.
     const longest = Math.max(Math.abs(x), Math.abs(y))
@@ -60,9 +83,12 @@ export const input = {
     return { steer: Math.max(-1, Math.min(1, x)), throttle: Math.max(-1, Math.min(1, y)) }
   },
 
-  sprint: () => enabled && (held.has('sprint') || touch.sprint),
-  crouch: () => enabled && (held.has('crouch') || touch.crouch),
-  jumpHeld: () => enabled && (held.has('jump') || touch.jump),
+  sprint: () => enabled && (held.has('sprint') || touch.sprint || pad.sprint),
+  crouch: () => enabled && (held.has('crouch') || touch.crouch || pad.crouch),
+  jumpHeld: () => enabled && (held.has('jump') || touch.jump || pad.jump),
+
+  /** Whether a controller has produced input this session, for the controls card. */
+  usingPad: () => pad.active,
 
   /** True once per press of jump. */
   consumeJump(): boolean {
@@ -73,9 +99,11 @@ export const input = {
 
   /** Look movement since the last call, in radians (before the player's sensitivity setting). */
   consumeLook(): { x: number; y: number } {
-    const delta = { x: lookX, y: lookY }
+    const delta = { x: lookX + pad.lookX, y: lookY + pad.lookY }
     lookX = 0
     lookY = 0
+    pad.lookX = 0
+    pad.lookY = 0
     return delta
   },
 
@@ -102,6 +130,58 @@ export const input = {
     touch.y = y
   },
 
+  /**
+   * A controller's state for this frame, written by the gamepad pump. A press of jump is
+   * queued here exactly as the touch button queues it, so both share one path.
+   */
+  setPad(state: {
+    x: number
+    y: number
+    sprint: boolean
+    crouch: boolean
+    jump: boolean
+    lookX: number
+    lookY: number
+  }): void {
+    if (!enabled) {
+      pad.active = false
+      return
+    }
+    if (state.jump && !pad.jump) jumpQueued = true
+    pad.x = state.x
+    pad.y = state.y
+    pad.sprint = state.sprint
+    pad.crouch = state.crouch
+    pad.jump = state.jump
+    pad.lookX += state.lookX
+    pad.lookY += state.lookY
+    pad.active =
+      Math.abs(state.x) + Math.abs(state.y) + Math.abs(state.lookX) + Math.abs(state.lookY) >
+        0.001 ||
+      state.sprint ||
+      state.crouch ||
+      state.jump
+  },
+
+  /** Fire a one-shot action from a device that has no keyboard, such as a controller. */
+  tap(action: TapAction): void {
+    if (!enabled) return
+    for (const listener of tapListeners) listener(action)
+  },
+
+  /**
+   * Fire a menu action. Unlike `tap`, this works while paused — which is the whole point
+   * of a pause button on a controller, since there is no Escape key on a pad.
+   */
+  menu(action: MenuAction): void {
+    for (const listener of menuListeners) listener(action)
+  },
+
+  onMenu(listener: (action: MenuAction) => void): () => void {
+    menuListeners.add(listener)
+    return () => menuListeners.delete(listener)
+  },
+
   setTouchButton(button: 'sprint' | 'crouch' | 'jump', down: boolean): void {
     if (button === 'jump' && down && !touch.jump) jumpQueued = true
     touch[button] = down
@@ -118,6 +198,9 @@ export const input = {
     pressedCodes.clear()
     touch.x = touch.y = 0
     touch.sprint = touch.crouch = touch.jump = false
+    pad.x = pad.y = pad.lookX = pad.lookY = 0
+    pad.sprint = pad.crouch = pad.jump = false
+    pad.active = false
     lookX = lookY = zoomSteps = 0
     jumpQueued = false
   },

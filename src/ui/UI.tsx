@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { loadWorld } from '../game/loadWorld'
 import { useGame } from '../state/gameStore'
 import { hideBoot, setBootProgress, showBootError, startBootTips } from './bootScreen'
+import { AudioListener } from '../audio/AudioListener'
 import { Hud } from './Hud'
 import { RideControls } from './RideControls'
 import { MainMenu } from './MainMenu'
@@ -26,6 +27,7 @@ export function UI() {
     <div className={`ui${touch ? ' ui--touch' : ''}`}>
       <BootDriver />
       {phase === 'menu' && <MainMenu />}
+      <AudioListener />
       {phase === 'playing' && <Hud />}
       {phase === 'playing' && ride && <RideControls />}
       {phase === 'playing' && touch && !teleportOpen && !ride && <TouchControls />}

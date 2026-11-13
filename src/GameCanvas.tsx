@@ -35,6 +35,8 @@ import { planCampaign } from './world/campaign/placement'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
+import { GamepadPump } from './input/gamepadPump'
+import { CitySound } from './game/CitySound'
 import { Pedestrians } from './world/pedestrians/Pedestrians'
 import { Billboards } from './world/furniture/Billboards'
 import { StreetFurniture } from './world/furniture/StreetFurniture'
@@ -100,6 +102,8 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           gravity={[0, -PLAYER.gravity, 0]}
         >
           <StepClock />
+          {/* Polls a controller before anything reads input; runs at -60, ahead of physics. */}
+          <GamepadPump />
           <World zone={zone} />
           <Billboards zone={zone} start={start} />
           <StreetFurniture zone={zone} />
@@ -109,6 +113,7 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           <Traffic zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />
+          <CitySound zone={zone} />
           <Ride onArrival={() => finishRide(true)} />
           <ReadySignal />
         </Physics>

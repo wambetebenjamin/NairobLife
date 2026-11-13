@@ -21,8 +21,20 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Replace the bootstrap map snapshot with a live OpenStreetMap download
       (`npm run osm:fetch -- nairobi-cbd`, see [DATA.md](DATA.md))
 - [ ] Play-test on real phones, Safari and Firefox
-- [ ] Sound: footsteps, city ambience
-- [ ] Gamepad support
+- [x] Sound on foot: a footstep every stride, timed to the distance walked rather than a
+      fixed interval, and different on tarmac, paving slabs, gravel and concrete; plus a
+      low bed of distant traffic that rises beside a big road and near a stage. The
+      surface is inferred from the mapped road under the player, and the bed's level from
+      that road's width and the distance to the nearest stage — it is an atmospheric bed,
+      not a measurement of real traffic volume.
+- [x] Gamepad support. A standard-layout controller is polled each frame and folded into
+      the same input state as the keyboard, so the player, camera and vehicles need no
+      changes: left stick moves, right stick looks, A jumps, B sprints, X crouches, Y gets
+      in and out of a car, D-pad up opens the map, Start pauses and resumes. Sticks get a
+      dead zone and a shaping curve rather than being read raw; a pad with no right stick
+      can still turn with the D-pad. Not tested on real hardware — the decoding is covered
+      by tests, but the mapping is the browser's standard one and a physical controller has
+      not been held.
 
 ## Phase 2: vehicles (this version)
 
@@ -38,7 +50,11 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [ ] Speed bumps. The map data has none for the CBD, so they need a fresh download
       or mapping on OpenStreetMap first
 - [ ] Raised pavements with kerbs a wheel has to climb; lane lines on the flyover decks
-- [ ] Engine, tyre and horn sounds
+- [x] Engine and horn sounds, synthesised in the browser rather than sampled: the nearest
+      few ambient vehicles get an engine note panned to where they are, and a matatu
+      sounds its horn as it pulls up at a stage. Volume and mute are in Settings, and
+      nothing starts until the player's first click. Tyre and road noise, and everything
+      on foot, are still missing.
 - [ ] Damage, and vehicles that can roll over (they cannot yet, so there is nothing to
       flip upright)
 - [ ] Detailed hand-painted matatu art and readable name and route boards
@@ -49,11 +65,10 @@ Phase 3 is in progress. Later phases are plans, not promises.
 - [x] Directed ground-road graph using mapped one-way streets and stored lane counts
 - [x] Ambient cars, matatus and bodas follow the graph; matatus pause near stages.
       Solid approximate boxes, a near-player forward-vehicle probe and same-segment
-      spacing make them interact with players and some other traffic. Shared graph
-      junctions have conservative one-at-a-time reservations; dead-end restarts wait for
-      an unoccupied location away from the player and camera. Motion is still simplified:
-      unconnected crossings, short links and turns can overlap or jam, restarts are not
-      seamless, and elevated roads are not used. This is not a complete traffic simulation.
+      spacing make them interact with players and some other traffic. Dead-end restarts
+      wait for an unoccupied location away from the player and camera. This is still not a
+      complete traffic simulation: restarts are not seamless and elevated roads are not
+      used.
 - [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,
       marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
       is no pursuit, siren or policing gameplay, and State House is outside the map.
@@ -62,17 +77,35 @@ Phase 3 is in progress. Later phases are plans, not promises.
       routes, wildlife simulation, railway service or walkable destinations.
 - [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
       Market; short walking paths include pauses. People are visual-only, not AI agents.
+- [x] Pedestrians as articulated figures rather than stacked boxes: tapered torso and
+      limbs, a necked head with a face, elbows, knees and feet, per-person height, build,
+      skin, hair and clothing, and a walk cycle whose knees bend backwards and whose feet
+      keep time with the ground. Standing figures fidget instead of freezing. The gait is
+      procedural, so it is lifelike in proportion and timing rather than motion-captured;
+      faces are suggested, not modelled, and nobody reacts to the player.
 - [x] Fictional stage-to-stage matatu shuttle with a moving city view, cancel and skip.
       Pick stages from Teleport; the journey starts at the selected departure stage and
       follows a shortest directed route, not an official route or existing traffic vehicle.
-- [x] Mapped lamps, stage signs and traffic signals. Signals use a simplified two-axis
-      cycle and ambient traffic responds; player vehicles and guided rides are not governed.
+- [x] Mapped lamps, stage signs and traffic signals. Each mapped signal is matched to the
+      junction box it stands on, and that box goes green along one axis while the other
+      waits, with an all-red pause between; ambient traffic obeys it. The cycle is
+      simplified — two axes, fixed timings — and player vehicles and guided rides are not
+      governed.
 - [x] In-world "ADVERTISE HERE" placeholders; no ad booking or contact system
 - [x] Fictional non-partisan campaign rally near City Square, with an animated speaker
       and crowd (silent and non-interactive)
 - [ ] Street-level Sheng flavour reviewed by native speakers: the optional language
       remains a draft until that external review happens.
-- [ ] Full traffic collision avoidance and junction priority, beyond the current prototype.
+- [x] Junction priority at crossing roads. A crossing search finds every place roads meet
+      — shared graph vertices, geometric crossings where two ways share no node, and T
+      joins — and merges meeting points within a few metres into one junction box: about
+      500 boxes and 6,800 conflicting approach pairs in the CBD, found once per zone.
+      Vehicles stop on the line, claim the box only when no conflicting approach holds it,
+      and a vehicle that has crossed its line always clears. A vehicle that has a clear
+      approach still takes its turn in order of how long it has waited. Motion within a
+      box is still simplified: turn paths are not predicted, so the conflicts kept are
+      conservative, and a vehicle turns at the junction's centre rather than tracing a
+      lane. Not a complete traffic simulation.
 
 ## Phase 4: a bigger, better-looking Nairobi
 
@@ -81,10 +114,17 @@ Phase 3 is in progress. Later phases are plans, not promises.
       Nairobi National Park, the SGR and major malls need their own actual mapped zones;
       they cannot be visited from the current CBD map.
 - [ ] Terrain: the real slope from Upper Hill down to the Nairobi River
-- [ ] Hand-made models for the icons: KICC, Parliament's clock tower, Jamia Mosque,
-      the National Archives, the Railway Station
+- [x] Hand-made models for five icons, built from lathes, vaults and boxes rather than
+      extruded from their footprints: KICC (the round tower standing in its flared skirt),
+      the Parliament clock tower, Jamia Mosque with its domes and minarets, the National
+      Archives with its arcaded colonnade, and the Central Railway Station with its vaulted
+      trainshed and platform canopy. Each replaces its mapped footprint, so it stands where
+      the map says, and each is fitted inside that footprint so it cannot grow through its
+      neighbours. The remaining mapped landmarks keep their map shapes.
 - [ ] Water that looks like water; the Nairobi River
-- [ ] Rain: the long rains and the short rains
+- [x] Rain: the long rains and the short rains, on the real calendar, with overcast
+      skies, wet dark tarmac and a rain field that follows the camera. Settings can force
+      either season or turn it off.
 - [ ] Simpler distant buildings, so far-off districts stay cheap to draw
 - [ ] A rigged character model, with outfits
 
