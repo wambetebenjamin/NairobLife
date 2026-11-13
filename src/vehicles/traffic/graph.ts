@@ -1,5 +1,6 @@
 /** Directed ground-level road graph and simple ambient traffic. */
 import { VEHICLES } from '../../config/vehicles'
+import { orientedRectsOverlap, type OrientedRect } from '../../core/geom2d'
 import { hash01 } from '../../core/random'
 import { DRIVABLE, type ZoneFile } from '../../world/zone/format'
 
@@ -109,24 +110,59 @@ export function makeTraffic(
   const rest = long
     .filter((e) => !used.has(e.id))
     .sort((a, b) => hash01(a.id, 54) - hash01(b.id, 54))
-  return [...near, ...rest].slice(0, limit).map(({ edge, id }, seed) => ({
-    edge: id,
-    progress: edge.length * (0.2 + 0.6 * hash01(seed, 5)),
-    speed: 5 + 3 * hash01(seed, 6),
-    kind:
-      seed === 2 || seed === 5 || seed === 8
-        ? 'boda'
-        : seed % 7 === 0
-          ? 'matatu'
-          : seed % 8 === 0
-            ? 'boda'
-            : 'car',
-    patrol: seed === 2 || seed === 5 || seed === 8,
-    seed,
-    wait: 0,
-    stopped: false,
-    turns: 0,
-  }))
+
+  // Ambient traffic is cars, matatus and bodas only: a nganya is a player vehicle, not
+  // something the simulation drives.
+  const kindOf = (seed: number): 'car' | 'boda' | 'matatu' =>
+    seed === 2 || seed === 5 || seed === 8
+      ? 'boda'
+      : seed % 7 === 0
+        ? 'matatu'
+        : seed % 8 === 0
+          ? 'boda'
+          : 'car'
+
+  const agents: TrafficAgent[] = []
+  // Bodies already placed, as rectangles. Two vehicles that start inside each other are
+  // stuck inside each other until one of them happens to turn off, which looks like a
+  // crash that no driver caused.
+  const placed: OrientedRect[] = []
+
+  for (const { edge, id } of [...near, ...rest]) {
+    if (agents.length >= limit) break
+    const seed = agents.length
+    const progress = edge.length * (0.2 + 0.6 * hash01(seed, 5))
+    const kind = kindOf(seed)
+    const pose = trafficPose(edge, progress)
+    const spec = VEHICLES[kind]
+    const body: OrientedRect = {
+      x: pose.x,
+      z: pose.z,
+      // The car's own forward axis: yaw 0 faces -z.
+      dx: -Math.sin(pose.yaw),
+      dz: -Math.cos(pose.yaw),
+      halfLength: spec.length / 2,
+      halfWidth: spec.width / 2,
+    }
+    // A small margin, because two bumpers touching is already too close at a standstill.
+    if (placed.some((other) => orientedRectsOverlap(body, other, 1.2))) continue
+    placed.push(body)
+    // Identities are assigned to accepted candidates, so the patrol bikes still appear if
+    // a spot was rejected; `seed` is the count of agents so far, not the candidate index.
+    agents.push({
+      edge: id,
+      progress,
+      speed: 5 + 3 * hash01(seed, 6),
+      kind,
+      // Exactly three marked patrols, always the bikes at these three seeds.
+      patrol: seed === 2 || seed === 5 || seed === 8,
+      seed,
+      wait: 0,
+      stopped: false,
+      turns: 0,
+    })
+  }
+  return agents
 }
 
 /** Left-hand lane, measured relative to direction of travel. */

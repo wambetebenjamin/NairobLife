@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { VEHICLES } from '../../config/vehicles'
+import { orientedRectsOverlap } from '../../core/geom2d'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import {
   buildRoadGraph,
@@ -71,6 +72,40 @@ describe('ambient traffic graph', () => {
     stepTraffic(patrol[0], real, 0.1)
     expect(patrol[0].progress).toBeGreaterThan(before)
     expect(makeTraffic(real, { x: 0, z: 0 }, 2).filter((a) => a.patrol)).toHaveLength(0)
+  })
+  it('never starts two vehicles inside each other, wherever the player is standing', () => {
+    // A spawn used to place a vehicle on its edge without looking at what was already
+    // there, so two cars could start overlapping and stay locked together until one
+    // happened to reach a junction. The whole city is checked, not one lucky start.
+    const real = buildRoadGraph(fixture)
+    // The first of these used to place two cars inside each other.
+    for (const start of [
+      { x: -1440, z: -900 },
+      { x: 0, z: 0 },
+      { x: 600.9, z: 335 },
+      { x: 311.4, z: -407.8 },
+    ]) {
+      const agents = makeTraffic(real, start)
+      expect(agents).toHaveLength(65)
+      const bodies = agents.map((a) => {
+        const pose = trafficPose(real.edges[a.edge], a.progress)
+        const spec = VEHICLES[a.kind]
+        return {
+          x: pose.x,
+          z: pose.z,
+          dx: -Math.sin(pose.yaw),
+          dz: -Math.cos(pose.yaw),
+          halfLength: spec.length / 2,
+          halfWidth: spec.width / 2,
+        }
+      })
+      for (let i = 0; i < bodies.length; i++)
+        for (let j = i + 1; j < bodies.length; j++)
+          expect(
+            orientedRectsOverlap(bodies[i], bodies[j], 1.2),
+            `vehicles ${i} and ${j} overlap near (${start.x}, ${start.z})`,
+          ).toBe(false)
+    }
   })
   it('stops matatus at stages, waits, and resumes; bodas do not stop', () => {
     const matatu = agent('matatu')
