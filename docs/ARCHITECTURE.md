@@ -222,6 +222,10 @@ looking:
   deck and down again, and then steered hard into the crash barriers, which must hold;
 - that no vehicle is parked inside a building, a tree or another vehicle, and that every
   named stage has a matatu;
+- the player's own legs, against Rapier's character controller set up exactly as
+  `Player.tsx` sets it up: a kerb up to 0.5 m is stepped over, and a loading dock is a
+  wall. Measured, the real limit is about 0.51 m for the configured 0.45 m, because
+  autostep also spends its step offset;
 - which side of the road the paint goes on;
 - the import rule between the folders of `src/`.
 
