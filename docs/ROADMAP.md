@@ -88,8 +88,15 @@ Phase 3 is in progress. Later phases are plans, not promises.
       marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
       is no pursuit, siren or policing gameplay, and State House is outside the map.
 - [x] Separate looping 3D scenic previews inspired by Nairobi National Park and SGR,
-      accessible from Teleport. These are stylised fictional dioramas, not real mapped
-      routes, wildlife simulation, railway service or walkable destinations.
+      accessible from Teleport. These are stylised dioramas, not real mapped routes,
+      wildlife simulation, railway service or walkable destinations.
+- [x] The park diorama rebuilt against reference photographs rather than memory: straw
+      grassland (#9c814a) instead of olive-grey, very dark umbrella acacias, a gradient sky,
+      two ridgelines and nineteen towers standing on the horizon behind the game. Daylight
+      lighting replaces the previous ambient+directional pair that multiplied the palette by
+      up to 3.4x and washed it out. The tour camera now runs an arc across the front so the
+      animals and the skyline stay in frame together; orbiting the full circle spent half the
+      loop looking at an empty foreground.
 - [x] Pedestrians on clear pavements, with extra candidates near mapped stages and City
       Market; short walking paths include pauses. People are visual-only, not AI agents.
 - [x] Pedestrians as articulated figures rather than stacked boxes: tapered torso and
