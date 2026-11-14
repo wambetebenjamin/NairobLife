@@ -13,7 +13,11 @@ import sys
 
 from PIL import Image, ImageDraw
 
-svg = open('/tmp/scenic.svg').read()
+# First positional arg is the output PNG; an optional second is the input SVG. It used to
+# hardcode /tmp/scenic.svg, which silently rasterised the wrong file for any other caller.
+out = sys.argv[1] if len(sys.argv) > 1 else '/tmp/scenic.png'
+source = sys.argv[2] if len(sys.argv) > 2 else '/tmp/scenic.svg'
+svg = open(source).read()
 W = int(re.search(r'width="(\d+)"', svg).group(1))
 H = int(re.search(r'height="(\d+)"', svg).group(1))
 vb = [float(v) for v in re.search(r'viewBox="([-\d. ]+)"', svg).group(1).split()]
@@ -21,9 +25,20 @@ bg = re.search(r'background-color: rgb\((\d+), (\d+), (\d+)\)', svg)
 im = Image.new('RGB', (W, H), tuple(int(g) for g in bg.groups()) if bg else (255, 255, 255))
 d = ImageDraw.Draw(im)
 
+# Paths are drawn in document order, and SVGRenderer has already depth-sorted them. A
+# semi-transparent path must be COMPOSITED onto everything drawn before it, not filled
+# opaquely -- the diorama's haze veil is 441 paths at fill-opacity 0.16 to 0.64, and filling
+# those solid drew grey slabs over the towers and called it haze. Each translucent triangle is
+# therefore rasterised onto its own layer and alpha-composited back.
+PATH = re.compile(r'<path d="([^"]+)"\s+style="fill:rgb\((\d+), ?(\d+), ?(\d+)\)(?:;fill-opacity:([\d.]+))?')
+
 filled = 0
-for m in re.finditer(r'<path d="([^"]+)"\s+style="fill:rgb\((\d+), ?(\d+), ?(\d+)\)', svg):
+blended = 0
+for m in PATH.finditer(svg):
     colour = (int(m.group(2)), int(m.group(3)), int(m.group(4)))
+    alpha = float(m.group(5)) if m.group(5) else 1.0
+
+    polys = []
     for run in re.findall(r'M[^M]*', m.group(1)):
         # No y flip. Verified two ways: raising a cube in world space makes its SVG y more
         # negative, and the ground lands in the bottom band of the frame this way.
@@ -32,9 +47,24 @@ for m in re.finditer(r'<path d="([^"]+)"\s+style="fill:rgb\((\d+), ?(\d+), ?(\d+
             for a, b in re.findall(r'[ML]([-\d.e]+),([-\d.e]+)', run)
         ]
         if len(pts) >= 3:
+            polys.append(pts)
+
+    if not polys:
+        continue
+
+    if alpha >= 0.999:
+        for pts in polys:
             d.polygon(pts, fill=colour)
             filled += 1
+    else:
+        layer = Image.new('RGB', (W, H), colour)
+        mask = Image.new('L', (W, H), 0)
+        md = ImageDraw.Draw(mask)
+        for pts in polys:
+            md.polygon(pts, fill=int(round(alpha * 255)))
+        im.paste(layer, (0, 0), mask)
+        blended += 1
+        filled += len(polys)
 
-out = sys.argv[1] if len(sys.argv) > 1 else '/tmp/scenic.png'
 im.save(out)
-print(f'RESULT filled {filled} triangles -> {out}')
+print(f'RESULT filled {filled} triangles ({blended} composited) -> {out}')

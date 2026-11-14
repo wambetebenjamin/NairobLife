@@ -14,8 +14,28 @@ import type { Tags } from './osm'
 /** Floor-to-floor height. The tagged CBD towers average 3.4 m per level. */
 export const LEVEL_HEIGHT = 3.4
 const PARAPET = 0.8
-/** A guessed building is at most this many times as tall as its footprint is wide. */
-const MAX_GUESSED_SLENDERNESS = 1.25
+/**
+ * A guessed building is at most this many times as tall as its footprint is wide.
+ *
+ * This was 1.25 and it was the single worst number in the bake. Measured against the 251
+ * buildings whose height OSM actually gives, slenderness (height / sqrt(footprint area)) has a
+ * median of 1.35, and 138 of those 251 exceed 1.25. Among buildings over 60 m the median is
+ * 3.04. A cap of 1.25 therefore made it arithmetically impossible for a guessed building to be
+ * tall, which is why the CBD came out as a plateau with towers spiking out of it.
+ *
+ * 3.2 is the p90 of the tagged set, so it still stops a kiosk-sized outline becoming a tower.
+ */
+const MAX_GUESSED_SLENDERNESS = 3.2
+
+/**
+ * Within this many levels of tagged neighbours, a building is treated as standing in the
+ * dense core and inherits a fraction of that local height instead of being typed.
+ * The tagged CBD median is ~10 levels, the edges ~4.
+ */
+const CORE_LEVELS = 6
+/** Fraction of the local tagged median given to an untyped building in the core. */
+const CORE_FRACTION = 0.8
+const CORE_MIN_LEVELS = 4
 
 export interface TaggedHeight {
   /** Roof height in metres, if OSM says (directly, or via levels). */
@@ -133,25 +153,47 @@ export function createHeightEstimator(known: readonly KnownHeight[]): (b: Estima
   }
 
   return ({ id, type, area, x, z }) => {
+    // An explicit type wins. A cathedral is a cathedral wherever it stands, and if OSM
+    // tagged something a kiosk it is not a tower because it happens to sit downtown.
     if (type && FIXED_BY_TYPE[type] !== undefined) return FIXED_BY_TYPE[type]
     if (area < 40) return 3 // kiosks, guard huts, booths
+
+    const around = neighbourhood(x, z)
 
     const jitter = 0.6 + hash01(id, 1) * 0.9 // 0.6 .. 1.5
     let levels: number
     if (type && LEVELS_BY_TYPE[type] !== undefined) {
       levels = LEVELS_BY_TYPE[type] * (0.8 + hash01(id, 2) * 0.4)
+    } else if (around !== undefined && around >= CORE_LEVELS) {
+      // Dense core: inherit a fraction of the local tagged median rather than falling back to
+      // the generic "2 floors" tone. Tagged heights in this zone run from about 20 m at the
+      // edges to 140 m in the core, and footprint area does NOT predict height here (Pearson
+      // r = -0.024 on log area against the 251 tagged buildings), so locality is the only
+      // honest signal. This used to be capped at 9 levels, which flattened 2,821 buildings to
+      // a median of 11 m and left the 251 tagged towers sticking out of a plateau.
+      levels = Math.max(CORE_MIN_LEVELS, around * CORE_FRACTION)
     } else {
       // Tagged buildings skew tall (people tag towers), so untagged neighbours get a
       // fraction of the local average rather than the average itself.
-      const around = neighbourhood(x, z)
-      const tone = around === undefined ? 2 : Math.min(Math.max(around * 0.36, 1.6), 9)
+      //
+      // The floor was raised from 1.6 to 2.5, and the ceiling from 9 to 30. The cap of 9
+      // flattened the entire CBD into a low plateau: 2,821 estimated buildings had a median
+      // of 11 m and a maximum of 34.8 m, while the 251 tagged ones ran to 140 m. That cliff
+      // IS the skyline error. Measurement says footprint area does not predict height within
+      // the CBD (Pearson r = -0.024 on log area against height), so the only honest signal is
+      // the local tagged median -- not size.
+      const tone = around === undefined ? 2 : Math.min(Math.max(around * 0.36, 2.5), 30)
       const footprint = area < 120 ? 0.6 : area > 2500 ? 0.65 : 1
       levels = tone * footprint * jitter
-      // A small footprint cannot carry many floors. Without this cap, every kiosk-sized
-      // outline that happens to stand beside a tagged tower is guessed into a tower itself.
-      const width = Math.sqrt(area)
-      levels = Math.min(levels, (width * MAX_GUESSED_SLENDERNESS) / LEVEL_HEIGHT)
     }
+    // A small footprint cannot carry many floors, whatever route got us here. Without this,
+    // every kiosk-sized outline that happens to stand beside a tagged tower is guessed into a
+    // tower itself. This is a physical limit, not a stylistic one, so it applies last.
+    const width = Math.sqrt(area)
+    levels = Math.min(levels, (width * MAX_GUESSED_SLENDERNESS) / LEVEL_HEIGHT)
+    // Jitter after the cap, not before. Applying it before meant every tall building in the
+    // core landed on the same clamp value and a street came out as one height repeated.
+    levels *= 0.85 + hash01(id, 4) * 0.3
     const whole = Math.max(1, Math.round(levels))
     return Math.round((whole * LEVEL_HEIGHT + PARAPET) * 10) / 10
   }

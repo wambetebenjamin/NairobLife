@@ -28,3 +28,8 @@ data/osm/*.osm.json
 
 # debug map drawn by `npm run osm:preview`
 data/zones/*.preview.svg
+
+# Working scratch for image_search. Results here are overwhelmingly Adobe Stock / Getty /
+# iStock previews, which are NOT redistributable even as thumbnails. Only curated, licence-
+# checked photographs belong in docs/reference/, each with an entry in its README.
+image-search/

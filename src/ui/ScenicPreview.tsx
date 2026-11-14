@@ -7,6 +7,8 @@ import { PlaneGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { hash01 } from '../core/random'
 import { buildParkTerrain } from './scenic/parkTerrain'
+import { hazeAt, hazed } from './scenic/haze'
+import { PARK, SEGMENTS, SKYLINE_Z } from './scenic/parkPalette'
 
 export type ScenicKind = 'park' | 'sgr'
 
@@ -80,9 +82,15 @@ export function ScenicPreview({
           <color attach="background" args={[kind === 'park' ? PARK.skyHorizon : '#badbe2']} />
           {/* Daylight, not a studio. Ambient plus sun was multiplying the palette by up to
               3.4x, which washed the straw-coloured grassland out to near-white sand and made
-              the whole diorama look bleached. Real shade is about a third of full sun. */}
-          <hemisphereLight args={['#cfe0e6', '#7a6234', 0.85]} />
-          <directionalLight position={[26, 40, 18]} intensity={1.15} color="#fff3dd" />
+              the whole diorama look bleached. Real shade is about a third of full sun.
+
+              Trimmed again because the palette is sampled from the photographs and the lights
+              were still lifting it: at 0.85 + 1.15 the ground rendered at rgb(187,157,88)
+              against the sampled #a8894a, a 1.11-1.18x multiply per channel, so the grass came
+              out 12% too bright and every hazed ratio measured against it was distorted. These
+              values now land the ground on the colour it was sampled as. */}
+          <hemisphereLight args={['#cfe0e6', '#7a6234', 0.82]} />
+          <directionalLight position={[26, 40, 18]} intensity={0.92} color="#fff3dd" />
           <TourCamera kind={kind} />
           {kind === 'park' ? <Park /> : <Rail />}
         </Canvas>
@@ -123,26 +131,57 @@ function TourCamera({ kind }: { kind: ScenicKind }) {
   return null
 }
 
-function Acacia({ x, z, s = 1 }: { x: number; z: number; s?: number }) {
+/**
+ * A real umbrella thorn. The first version was three squashed spheres, which is why it read
+ * as a round lollipop. An acacia is a flat, spreading, *faceted* crown on a forked trunk: the
+ * silhouette is the whole point, so this builds a fan of angled leaf plates around a fork.
+ */
+function Acacia({ x, z, s = 1, seed = 1 }: { x: number; z: number; s?: number; seed?: number }) {
+  const crown = useMemo(() => {
+    const plates: { p: [number, number, number]; r: [number, number, number]; c: string }[] = []
+    const tones = [PARK.canopyDark, PARK.canopyMid, PARK.canopyLit]
+    // A wide, shallow fan rather than a ball: acacias are flatter than they are deep.
+    for (let i = 0; i < 11; i++) {
+      const a = hash01(seed, 70 + i) * Math.PI * 2
+      const reach = Math.sqrt(hash01(seed, 80 + i)) * 2.9
+      const lift = 4.3 - reach * 0.22 + hash01(seed, 90 + i) * 0.32
+      plates.push({
+        p: [Math.cos(a) * reach, lift, Math.sin(a) * reach],
+        r: [0.85 + hash01(seed, 100 + i) * 0.7, 0.16, 0.85 + hash01(seed, 110 + i) * 0.7],
+        c: tones[i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 2],
+      })
+    }
+    // A low shoulder of foliage under the fan, so it is not a paper disc.
+    for (let i = 0; i < 4; i++) {
+      const a = hash01(seed, 120 + i) * Math.PI * 2
+      plates.push({
+        p: [Math.cos(a) * 1.1, 3.55 + hash01(seed, 130 + i) * 0.4, Math.sin(a) * 1.1],
+        r: [1.0, 0.42, 1.0],
+        c: PARK.canopyDark,
+      })
+    }
+    return plates
+  }, [seed])
   return (
     <group position={[x, 0, z]} scale={s}>
-      <mesh position={[0, 2, 0]}>
-        <cylinderGeometry args={[0.12, 0.28, 4, 6]} />
+      {/* A forked trunk: acacias split low and spread. */}
+      <mesh position={[0, 1.9, 0]} rotation={[0, 0, 0.06]}>
+        <cylinderGeometry args={[0.1, 0.26, 3.8, 5]} />
         <meshLambertMaterial color={PARK.trunk} />
       </mesh>
-      {/* Acacias are umbrella-shaped: broad, flat and very dark against the straw grass. */}
-      <mesh position={[0, 4.1, 0]} scale={[1.18, 0.34, 1]}>
-        <sphereGeometry args={[2.5, 12, 7]} />
-        <meshLambertMaterial color={PARK.canopyDark} />
-      </mesh>
-      <mesh position={[0, 4.32, 0.2]} scale={[0.82, 0.26, 0.7]}>
-        <sphereGeometry args={[2.5, 10, 6]} />
-        <meshLambertMaterial color={PARK.canopyMid} />
-      </mesh>
-      <mesh position={[-0.5, 4.5, -0.3]} scale={[0.46, 0.18, 0.42]}>
-        <sphereGeometry args={[2.5, 8, 5]} />
-        <meshLambertMaterial color={PARK.canopyLit} />
-      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * 0.55, 3.5, 0]} rotation={[0, 0, side * -0.62]}>
+          <cylinderGeometry args={[0.06, 0.13, 1.7, 4]} />
+          <meshLambertMaterial color={PARK.trunk} />
+        </mesh>
+      ))}
+      {crown.map((b, i) => (
+        <mesh key={i} position={b.p} scale={b.r}>
+          {/* Icosahedron, not sphere: faceted crowns read as foliage, smooth ones as plastic. */}
+          <icosahedronGeometry args={[1, 0]} />
+          <meshLambertMaterial color={b.c} flatShading />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -212,35 +251,6 @@ function Zebra({ x, z, turn = 0 }: { x: number; z: number; turn?: number }) {
     </group>
   )
 }
-
-/**
- * Colours sampled from photographs of the real park, not invented. The old scene used a flat
- * `#aaa667` for the ground -- an olive-grey that reads as mud rather than dry grass -- a
- * saturated toy-brown ring for the track, and one `#4c7446` green for every tree. The savannah
- * in the reference photographs is a warm straw-yellow (#9c814a to #b79941) against very dark
- * olive canopies (#2f3217 to #404411), and the interest comes almost entirely from the
- * skyline: sixteen towers standing on the horizon with the park in front of them.
- */
-const PARK = {
-  skyTop: '#3e6b7e',
-  skyHorizon: '#7fa3b3',
-  cloud: '#c3ccd2',
-  cloudShade: '#9aa9b2',
-  ridgeFar: '#998666',
-  ridgeNear: '#6f7355',
-  grassLit: '#a8894a',
-  grassMid: '#9c814a',
-  grassDry: '#b79941',
-  earth: '#8a6f3f',
-  trunk: '#6d5a3c',
-  canopyDark: '#2f3217',
-  canopyMid: '#404411',
-  canopyLit: '#4f5219',
-  tower: '#7d93a0',
-  towerLight: '#b3b8b6',
-  towerGlass: '#48697a',
-  towerWarm: '#8f8371',
-} as const
 
 /** Deterministic positions, so the diorama is the same every time it is opened. */
 const TUFTS = Array.from({ length: 620 }, (_, i) => {
@@ -328,10 +338,14 @@ function SkyDome() {
  * radius 110, which also made it 110 tall and swallowed the skyline completely.
  */
 function Ridge({ z, color, height }: { z: number; color: string; height: number }) {
+  // Unlit on purpose. A Lambert ridge picks up the sun AFTER its colour has been hazed, so it
+  // came out brighter than the sky behind it and read as a pale dune rather than a treeline.
+  // In giraffe-skyline-haze.jpg the distant vegetation is a silhouette: luminance 0.56 against
+  // 0.67 for the sky above it. The colour here is already the finished, haze-washed colour.
   return (
     <mesh position={[0, 0, z]} scale={[150, height, 26]}>
       <sphereGeometry args={[1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      <meshLambertMaterial color={color} />
+      <meshBasicMaterial color={hazed(color, hazeAt(Math.abs(z), height / 2))} />
     </mesh>
   )
 }
@@ -363,24 +377,40 @@ function Skyline() {
     [28, 11, 2.4, 1],
     [31, 16, 2.8, 0],
   ]
+  // Each tower is drawn as SEGMENTS stacked boxes, and each box gets the haze for its OWN
+  // height. Air is denser near the ground, so the base dissolves while the crown stays
+  // legible -- that vertical falloff is most of what makes a skyline read as distant.
+  //
+  // A translucent veil was tried first and abandoned. Correct alpha compositing (which the
+  // render harness did not do at the time, so the flaw was invisible) showed ~95
+  // sorted-transparent boxes with visible seams and a wireframe look, and it needed
+  // double-counting corrections to land on the reference numbers. Opaque segments need no
+  // blending at all, sort perfectly, and render identically in both three and the harness.
+  //
+  // Note `tones` is the RAW palette and `hazed()` is applied per segment. Pre-hazing the
+  // material as well would count the haze twice, which is exactly what happened once already.
   const tones = [PARK.tower, PARK.towerLight, PARK.towerGlass]
   return (
-    <group name="skyline" position={[0, 0, -62]}>
+    <group name="skyline" position={[0, 0, -SKYLINE_Z]}>
       {towers.map(([x, h, w, tone], i) => (
         <group key={i} position={[x, 0, 0]}>
-          <mesh position={[0, h / 2, 0]}>
-            <boxGeometry args={[w, h, w]} />
-            <meshLambertMaterial color={tones[tone]} />
-          </mesh>
-          {/* A darker glazed face so the towers read as buildings rather than blocks. */}
-          <mesh position={[0, h / 2, w / 2 + 0.02]}>
-            <boxGeometry args={[w * 0.72, h * 0.86, 0.04]} />
-            <meshLambertMaterial color={PARK.towerWarm} />
-          </mesh>
+          {SEGMENTS.map((_, seg) => {
+            const mid = (h * (seg + 0.5)) / SEGMENTS.length
+            return (
+              <mesh key={seg} position={[0, mid, 0]}>
+                <boxGeometry args={[w, h / SEGMENTS.length, w]} />
+                {/* Unlit, and the colour is fully decided here. Distant buildings under this
+                    much haze have almost no visible shading, and a lit box made every face a
+                    flat triangle pair with a hard diagonal across it -- real in three, ugly in
+                    any flat-shaded renderer, and unlike the photograph either way. */}
+                <meshBasicMaterial color={hazed(tones[tone], hazeAt(SKYLINE_Z, mid))} />
+              </mesh>
+            )
+          })}
           {i % 3 === 0 && (
             <mesh position={[0, h + 1.2, 0]}>
               <cylinderGeometry args={[0.08, 0.14, 2.4, 4]} />
-              <meshLambertMaterial color={PARK.towerLight} />
+              <meshBasicMaterial color={hazed(PARK.towerLight, hazeAt(SKYLINE_Z, h))} />
             </mesh>
           )}
         </group>
@@ -437,7 +467,7 @@ function Park() {
         <meshLambertMaterial color={PARK.earth} />
       </mesh>
       {TREES.map(([x, z, s], i) => (
-        <Acacia key={i} x={x} z={z} s={s} />
+        <Acacia key={i} x={x} z={z} s={s} seed={i + 1} />
       ))}
       {ROCKS.map((r, i) => (
         <mesh key={i} position={[r.x, r.s * 0.22, r.z]} scale={[r.s * 1.5, r.s * 0.5, r.s]}>
@@ -525,7 +555,7 @@ function Rail() {
         ))}
       </group>
       {[-25, -15, 15, 27].map((x, i) => (
-        <Acacia key={x} x={x} z={i % 2 ? -14 : 12} s={0.8} />
+        <Acacia key={x} x={x} z={i % 2 ? -14 : 12} s={0.8} seed={i + 21} />
       ))}
       {Array.from({ length: 8 }, (_, i) => (
         <mesh key={i} position={[-34 + i * 9, 2 + (i % 3), -32]}>

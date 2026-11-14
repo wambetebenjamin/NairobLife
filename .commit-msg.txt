@@ -1,0 +1,46 @@
+Stop flattening the CBD: the height estimate had a cap that forbade tall buildings
+
+Audit of the baked zone: 3,072 buildings, only 251 (8%) with a height that OSM actually
+gives. The other 2,821 are estimated, and their distribution was
+
+  median 11.0 m   p90 17.8 m   max 34.8 m   (zero above 60 m)
+
+while the 251 real ones ran median 34.8 m, max 140 m, 49 above 60 m. That cliff is the
+skyline error. The city was a low plateau with towers spiking out of it.
+
+Two causes, both measured
+-------------------------
+1. MAX_GUESSED_SLENDERNESS was 1.25 -- a hard cap of 1.25x height/sqrt(footprint area) on
+   any guess. Against the 251 buildings with real heights, slenderness has a median of 1.35;
+   138 of 251 exceed 1.25; among those over 60 m the median is 3.04. The cap made it
+   arithmetically impossible for a guessed building to be tall. Raised to 3.2, the p90 of the
+   measured set, which still stops a 150 m2 kiosk outline becoming a tower.
+
+2. Untagged buildings with no type fell back to a 1.6..9 floor ceiling. Raised, and a dense
+   core now inherits a fraction of the LOCAL tagged median instead of a generic "2 floors"
+   tone. Footprint area turned out to be useless as a signal -- Pearson r = -0.024 on log
+   area against height, r^2 = 0.001 -- because a 150 m2 tower block and a 5,000 m2 warehouse
+   are the same size on a map. Locality is the only honest predictor available here.
+
+   A fixed type table still wins where OSM provides one: a cathedral is not a tower because
+   it sits downtown, and a kiosk is not a tower because its neighbours are.
+
+Result
+------
+  estimated   median 11.0 -> 24.6 m   max 34.8 -> 72.2 m
+  real        unchanged (OSM is the source of truth and is not touched)
+
+Jitter is now applied AFTER the slenderness cap. Applied before, every tall building in the
+core clamped to the same value and a street came out as one height repeated.
+
+Tests: the old "never guesses a tower onto a small footprint" test hardcoded 1.25, i.e. it
+encoded the assumption being disproved, so it was rewritten against the measured p90 plus a
+"still nothing absurd" bound. A new test asserts a tall core stays tall and a low edge stays
+low, which is the property the old cap was silently destroying.
+
+376 tests, 39 files, lint and format clean.
+
+Still not actual: 2,821 buildings are still guesses, flagged `est`. 298 of them are NAMED
+landmarks with no height in OSM at all -- Kenya House Complex, Uniafric House, College House,
+National House, Ellis House, 20th Century Plaza, Holy Family Basilica. Fixing those properly
+needs `building:levels` from a network-connected Overpass fetch, not a better estimator.

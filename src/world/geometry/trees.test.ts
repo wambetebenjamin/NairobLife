@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import { ZoneIndex } from '../zone/zoneIndex'
-import { DRIVABLE } from '../zone/format'
+import { DRIVABLE, TREE_KINDS } from '../zone/format'
 import {
   TREE_CHUNK,
   TREE_STRIDE,
@@ -10,6 +10,7 @@ import {
   buildTreeMesh,
   packTrees,
   scatterTrees,
+  styleOfKind,
   treeStyle,
   trunkRadius,
 } from './trees'
@@ -61,6 +62,32 @@ describe('tree layout', () => {
     // Avenue trees are mostly broad and round, not palms.
     expect(styles.get(TREE_STYLE.round)!).toBeGreaterThan(styles.get(TREE_STYLE.palm)!)
     expect(styles.get(TREE_STYLE.palm)!).toBeGreaterThan(20)
+  })
+
+  it('keeps one baked kind per tree, so the map can name a species', () => {
+    // The bake used to keep only x/z and silently drop every tag. A tree without a kind is
+    // `unknown`, which is honest, but the array must stay parallel or the two drift apart.
+    if (!zone.treeKinds) return
+    // One kind per *mapped* tree (a flat [x, z] pair), not per scattered tree: parks are
+    // filled in at load time and have no OSM node behind them.
+    expect(zone.treeKinds.length).toBe(zone.trees.length / 2)
+    for (const kind of zone.treeKinds) expect(Object.values(TREE_KINDS)).toContain(kind)
+    // This extract has almost no species tags, so most mapped trees must stay unknown
+    // rather than being guessed at from a hash.
+    const known = zone.treeKinds.filter((k) => k !== TREE_KINDS.unknown).length
+    expect(known).toBeGreaterThan(0)
+    expect(known).toBeLessThan(zone.treeKinds.length * 0.5)
+  })
+
+  it('maps a real map tag to a shape, and falls back to the seed when unrecorded', () => {
+    expect(styleOfKind(TREE_KINDS.broadleaved, 1)).toBe(TREE_STYLE.round)
+    expect(styleOfKind(TREE_KINDS.evergreen, 1)).toBe(TREE_STYLE.acacia)
+    expect(styleOfKind(TREE_KINDS.palm, 1)).toBe(TREE_STYLE.palm)
+    expect(styleOfKind(TREE_KINDS.conifer, 1)).toBe(TREE_STYLE.columnar)
+    // Unknown must not be invented: it is exactly the hash the trees already used.
+    for (const seed of [1, 77, 4096, 123456]) {
+      expect(styleOfKind(TREE_KINDS.unknown, seed)).toBe(treeStyle(seed))
+    }
   })
 
   it('gives each tree a real height, canopy and seed', () => {
@@ -127,26 +154,28 @@ describe('tree geometry', () => {
   })
 
   it('makes the leaves lighter on top than underneath, so the canopy has volume', () => {
-    const meshes = buildTreeMesh(one(TREE_STYLE.round, 12, 5))
-    const { positions, colors } = meshes.leaves
-    let top = 0
-    let topCount = 0
-    let bottom = 0
-    let bottomCount = 0
-    for (let i = 0; i < positions.length; i += 3) {
-      if (positions[i] > 50) continue
-      const luminance = colors[i] * 0.2126 + colors[i + 1] * 0.7152 + colors[i + 2] * 0.0722
-      if (positions[i + 1] > 11) {
-        top += luminance
-        topCount++
-      } else if (positions[i + 1] < 7) {
-        bottom += luminance
-        bottomCount++
-      }
+    const { positions, colors } = buildTreeMesh(one(TREE_STYLE.round, 12, 5)).leaves
+    // Compare thirds of the canopy's own height span. Absolute y bands break the moment the
+    // canopy is lifted or flattened, which is a shape change, not a shading regression.
+    let low = Infinity
+    let high = -Infinity
+    for (let i = 1; i < positions.length; i += 3) {
+      low = Math.min(low, positions[i])
+      high = Math.max(high, positions[i])
     }
-    expect(topCount).toBeGreaterThan(0)
-    expect(bottomCount).toBeGreaterThan(0)
-    expect(top / topCount).toBeGreaterThan(bottom / bottomCount)
+    expect(high).toBeGreaterThan(low)
+    const band = [0, 0, 0]
+    const count = [0, 0, 0]
+    for (let i = 0; i < positions.length; i += 3) {
+      const third = Math.min(2, Math.floor(((positions[i + 1] - low) / (high - low)) * 3))
+      band[third] += colors[i] * 0.2126 + colors[i + 1] * 0.7152 + colors[i + 2] * 0.0722
+      count[third]++
+    }
+    expect(count[0]).toBeGreaterThan(0)
+    expect(count[2]).toBeGreaterThan(0)
+    const mean = band.map((sum, k) => sum / count[k])
+    expect(mean[2]).toBeGreaterThan(mean[0])
+    expect(mean[1]).toBeGreaterThan(mean[0])
   })
 
   it('builds each kind differently: a palm is tall and thin, an acacia is flat', () => {
