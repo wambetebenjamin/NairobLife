@@ -23,8 +23,47 @@ export interface RoadGraph {
 }
 const key = (x: number, z: number) => `${x},${z}`
 
+/**
+ * A segment whose carriageway is buried in a building is not a street. The map has a few:
+ * service ways drawn across a hotel's grounds, alleys that the buildings were later built
+ * over. Traffic that follows one drives through a wall, and since the buildings are solid
+ * colliders, so does the player.
+ *
+ * The measurement has to be the carriageway, not the centre line. Only 27 of 5,280 segments
+ * put their centre line inside a wall, but 658 have a building over some part of the
+ * carriageway. Most of those are corners clipped at a junction, where the building is what is
+ * wrong and the street is otherwise real, so this only rejects a segment that is buried
+ * almost all the way: 90% of its length, sampled across its full width.
+ *
+ * Measured over the CBD that is one street, 7 m long, both of its directions -- every one of
+ * its ends has three other streets, so nothing is disconnected by removing it.
+ */
+const BURIED = 0.9
+
+function buriedInBuildings(edge: Edge, buildingAt: (x: number, z: number) => unknown): boolean {
+  const dx = edge.bx - edge.ax
+  const dz = edge.bz - edge.az
+  const length = Math.hypot(dx, dz)
+  if (!length) return false
+  const nx = -dz / length
+  const nz = dx / length
+  const across = [-edge.width / 2, 0, edge.width / 2]
+  const samples = 20
+  let inside = 0
+  for (let n = 0; n <= samples; n++) {
+    const t = n / samples
+    const px = edge.ax + dx * t
+    const pz = edge.az + dz * t
+    if (across.every((o) => buildingAt(px + nx * o, pz + nz * o))) inside++
+  }
+  return inside / (samples + 1) >= BURIED
+}
+
 /** Only mapped shared vertices connect; crossings with no shared vertex stay disconnected. */
-export function buildRoadGraph(zone: ZoneFile): RoadGraph {
+export function buildRoadGraph(
+  zone: ZoneFile,
+  buildingAt?: (x: number, z: number) => unknown,
+): RoadGraph {
   const edges: Edge[] = []
   const outgoing = new Map<string, number[]>()
   const stages = zone.pois.filter((p) => p.k === 'stage')
@@ -65,6 +104,7 @@ export function buildRoadGraph(zone: ZoneFile): RoadGraph {
           to,
           stage,
         }
+        if (buildingAt && buriedInBuildings(edge, buildingAt)) return
         const id = edges.push(edge) - 1
         const list = outgoing.get(from) ?? []
         list.push(id)

@@ -110,6 +110,23 @@ describe('ambient traffic graph', () => {
           ).toBe(false)
     }
   })
+  it('leaves out a street that is buried inside a building', () => {
+    // The buildings are solid colliders, so a segment whose carriageway is mostly inside one
+    // is a road a car drives through a wall on, and a wall the player can walk into. The map
+    // is the source of the mistake; the graph is where it can be dropped.
+    //
+    // The fixture's first road is one-way with two segments. Cover both of them and the
+    // whole road goes; the residential way and the footway are left alone.
+    const covered = buildRoadGraph(zone, (x, z) => (Math.abs(z) < 6 && x >= 0 ? {} : undefined))
+    expect(covered.edges.map((e) => e.from)).not.toContain('0,0')
+    expect(covered.edges.length).toBe(graph.edges.length - 2)
+    // A building that only clips the edge of the carriageway is not enough: the street is
+    // real and the building is what is wrong, so the segment stays.
+    const clip = buildRoadGraph(zone, (x, z) =>
+      Math.abs(z - 4.5) < 0.5 && x >= 0 ? {} : undefined,
+    )
+    expect(clip.edges).toHaveLength(graph.edges.length)
+  })
   it('never starts a vehicle inside a building', () => {
     // The road graph is built from the map's drawn geometry. Where a street is drawn
     // through a building -- which happens 19 times in the CBD -- the graph has an edge that
