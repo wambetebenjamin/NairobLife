@@ -20,7 +20,7 @@
 import { distToSegmentSq, pointInPolygon, ringBounds } from '../../core/geom2d'
 import { hash01, seededRandom } from '../../core/random'
 import { SpatialGrid } from '../../core/spatialGrid'
-import type { AreaKind, ZoneFile } from '../zone/format'
+import { TREE_KINDS, type AreaKind, type ZoneFile } from '../zone/format'
 import {
   TREE_FLAME,
   TREE_GREENS,
@@ -45,6 +45,22 @@ export const trunkRadius = (height: number) => 0.12 + height * 0.017
 const DENSITY: Partial<Record<AreaKind, number>> = { wood: 110, park: 520, garden: 330 }
 const MAX_TREES = 2600
 const MIN_SPACING = 4
+
+/**
+ * The shape a mapped tree should be, given what OpenStreetMap actually said about it.
+ *
+ * Only 43 of the CBD's 271 mapped trees carry any classification at all -- 40 broadleaved and
+ * 3 evergreen, none of them a species -- so most still fall back to a seed. That is
+ * deliberate: inventing a species for an untagged tree would be making up data. Where the map
+ * did say something, it wins.
+ */
+export function styleOfKind(kind: number, seed: number): TreeStyle {
+  if (kind === TREE_KINDS.broadleaved) return TREE_STYLE.round
+  if (kind === TREE_KINDS.evergreen) return TREE_STYLE.acacia
+  if (kind === TREE_KINDS.palm) return TREE_STYLE.palm
+  if (kind === TREE_KINDS.conifer) return TREE_STYLE.columnar
+  return treeStyle(seed)
+}
 
 /** Which shape a tree is, from its seed. Roughly the mix you see in the CBD. */
 export function treeStyle(seed: number): TreeStyle {
@@ -114,8 +130,8 @@ export function scatterTrees(zone: ZoneFile): Float32Array {
     })
     return close
   }
-  const plant = (x: number, z: number, seed: number, wild: boolean) => {
-    const style = treeStyle(seed)
+  const plant = (x: number, z: number, seed: number, wild: boolean, kind = 0) => {
+    const style = styleOfKind(kind, seed)
     const height =
       style === TREE_STYLE.palm
         ? 9 + hash01(seed, 31) * 7
@@ -142,13 +158,13 @@ export function scatterTrees(zone: ZoneFile): Float32Array {
     planted.insert([x, z], x, z, x, z)
   }
 
-  for (let i = 0; i < zone.trees.length; i += 2) {
+  for (let i = 0, k = 0; i < zone.trees.length; i += 2, k++) {
     const x = zone.trees[i] / q
     const z = zone.trees[i + 1] / q
     // Mapped positions are trusted, but not blindly: OpenStreetMap has a few street trees
     // whose node sits in the middle of the carriageway next to them, and a trunk growing out
     // of a traffic lane looks like a bug in this game rather than in the map.
-    if (!tooClose(x, z) && !blocked(x, z)) plant(x, z, i + 1, false)
+    if (!tooClose(x, z) && !blocked(x, z)) plant(x, z, i + 1, false, zone.treeKinds?.[k] ?? 0)
   }
 
   zone.areas.forEach((area, index) => {
@@ -597,18 +613,20 @@ function round(
     )
   }
 
-  const blobs = 6 + Math.floor(hash01(seed, 60) * 3)
-  const canopyY = height - radius * 0.55
+  const blobs = 8 + Math.floor(hash01(seed, 60) * 3)
+  const canopyY = height - radius * 0.42
   for (let i = 0; i < blobs; i++) {
     const angle = hash01(seed, 70 + i) * Math.PI * 2
     const reach = hash01(seed, 80 + i) * radius * 0.62
     const rise = (hash01(seed, 90 + i) - 0.35) * radius * 0.75
+    // Wider than tall. The first version used 0.45/0.36/0.45 radii, which is nearly a sphere
+    // and is why every broadleaf tree in the city read as a green ball on a stick.
     b.blob(
       [x + Math.cos(angle) * reach, canopyY + rise, z + Math.sin(angle) * reach],
       [
-        radius * (0.45 + hash01(seed, 100 + i) * 0.3),
-        radius * (0.36 + hash01(seed, 110 + i) * 0.22),
-        radius * (0.45 + hash01(seed, 120 + i) * 0.3),
+        radius * (0.56 + hash01(seed, 100 + i) * 0.26),
+        radius * (0.26 + hash01(seed, 110 + i) * 0.14),
+        radius * (0.56 + hash01(seed, 120 + i) * 0.26),
       ],
       seed + i * 37,
       tint(leaf, 0.86 + hash01(seed, 130 + i) * 0.28),

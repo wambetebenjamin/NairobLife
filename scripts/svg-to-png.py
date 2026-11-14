@@ -13,7 +13,11 @@ import sys
 
 from PIL import Image, ImageDraw
 
-svg = open('/tmp/scenic.svg').read()
+# First positional arg is the output PNG; an optional second is the input SVG. It used to
+# hardcode /tmp/scenic.svg, which silently rasterised the wrong file for any other caller.
+out = sys.argv[1] if len(sys.argv) > 1 else '/tmp/scenic.png'
+source = sys.argv[2] if len(sys.argv) > 2 else '/tmp/scenic.svg'
+svg = open(source).read()
 W = int(re.search(r'width="(\d+)"', svg).group(1))
 H = int(re.search(r'height="(\d+)"', svg).group(1))
 vb = [float(v) for v in re.search(r'viewBox="([-\d. ]+)"', svg).group(1).split()]
@@ -35,6 +39,5 @@ for m in re.finditer(r'<path d="([^"]+)"\s+style="fill:rgb\((\d+), ?(\d+), ?(\d+
             d.polygon(pts, fill=colour)
             filled += 1
 
-out = sys.argv[1] if len(sys.argv) > 1 else '/tmp/scenic.png'
 im.save(out)
 print(f'RESULT filled {filled} triangles -> {out}')

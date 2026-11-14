@@ -30,6 +30,7 @@ import {
 import {
   OSM_ATTRIBUTION,
   Q,
+  TREE_KINDS,
   ZONE_FORMAT_VERSION,
   type ZoneArea,
   type ZoneBuilding,
@@ -68,6 +69,27 @@ import {
 } from './lib/tags'
 
 const VERBOSE = process.argv.includes('--verbose')
+/**
+ * What OpenStreetMap actually told us about a tree, reduced to one code.
+ *
+ * `species` and `genus` are the tags that would be ideal and they are almost never present in
+ * Nairobi -- 270 mapped trees in the CBD carry none. `leaf_type` and `leaf_cycle` are what is
+ * actually there, so those are what this reads. `denotation=urban` is ignored on purpose: it
+ * says where a tree stands, not what it is. No tag is the common case, and it stays `unknown`
+ * rather than being invented.
+ */
+function treeKindOf(tags: Record<string, string | undefined>): number {
+  const species = `${tags.species ?? ''} ${tags.genus ?? ''} ${tags.taxon ?? ''}`.toLowerCase()
+  if (/palm|areca|roystonea|washingtonia|cocos|phoenix/.test(species)) return TREE_KINDS.palm
+  if (/pine|cupress|cypress|juniper|casuarina|araucaria|thuja/.test(species))
+    return TREE_KINDS.conifer
+  if (tags.leaf_type === 'broadleaved') return TREE_KINDS.broadleaved
+  if (tags.leaf_type === 'needleleaved') return TREE_KINDS.conifer
+  if (tags.leaf_cycle === 'evergreen') return TREE_KINDS.evergreen
+  if (tags.leaf_cycle === 'deciduous') return TREE_KINDS.broadleaved
+  return TREE_KINDS.unknown
+}
+
 const quant = (metres: number) => Math.round(metres * Q)
 const round1 = (n: number) => Math.round(n * 10) / 10
 
@@ -595,6 +617,7 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
 
   // =================================================================== trees + points of interest
   const trees: number[] = []
+  const treeKinds: number[] = []
   for (const node of osm.nodes.values()) {
     const tags = node.tags
     if (!tags) continue
@@ -602,6 +625,7 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     if (!rectContains(rect, x, z)) continue
     if (tags.natural === 'tree') {
       trees.push(quant(x), quant(z))
+      treeKinds.push(treeKindOf(tags))
       continue
     }
     const kind = poiKind(tags)
@@ -611,6 +635,10 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     if (way.tags?.natural !== 'tree_row') continue
     const coords = coordsOf(way)
     if (!coords) continue
+    // A row carries its own tags, and they apply to every tree along it. Without this the
+    // kind array would fall out of step with the positions array, which is a silent
+    // corruption: kinds would start describing the wrong trees.
+    const rowKind = treeKindOf(way.tags)
     const SPACING = 9
     let carried = 0
     for (let i = 0; i < coords.xs.length - 1; i++) {
@@ -621,7 +649,10 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
       for (; d < len; d += SPACING) {
         const x = coords.xs[i] + (dx * d) / len
         const z = coords.zs[i] + (dz * d) / len
-        if (rectContains(rect, x, z)) trees.push(quant(x), quant(z))
+        if (rectContains(rect, x, z)) {
+          trees.push(quant(x), quant(z))
+          treeKinds.push(rowKind)
+        }
       }
       carried = d - len // how far into the next segment the next tree falls
     }
@@ -652,6 +683,9 @@ export function bakeZone(zone: ZoneDef, osm: OsmData): ZoneFile {
     areas,
     places,
     trees,
+    // Only written when the map actually said something, so zones without tree tags stay
+    // exactly as small as they were.
+    ...(treeKinds.some((k) => k !== TREE_KINDS.unknown) ? { treeKinds } : {}),
     pois: uniquePois,
   }
 

@@ -123,26 +123,57 @@ function TourCamera({ kind }: { kind: ScenicKind }) {
   return null
 }
 
-function Acacia({ x, z, s = 1 }: { x: number; z: number; s?: number }) {
+/**
+ * A real umbrella thorn. The first version was three squashed spheres, which is why it read
+ * as a round lollipop. An acacia is a flat, spreading, *faceted* crown on a forked trunk: the
+ * silhouette is the whole point, so this builds a fan of angled leaf plates around a fork.
+ */
+function Acacia({ x, z, s = 1, seed = 1 }: { x: number; z: number; s?: number; seed?: number }) {
+  const crown = useMemo(() => {
+    const plates: { p: [number, number, number]; r: [number, number, number]; c: string }[] = []
+    const tones = [PARK.canopyDark, PARK.canopyMid, PARK.canopyLit]
+    // A wide, shallow fan rather than a ball: acacias are flatter than they are deep.
+    for (let i = 0; i < 11; i++) {
+      const a = hash01(seed, 70 + i) * Math.PI * 2
+      const reach = Math.sqrt(hash01(seed, 80 + i)) * 2.9
+      const lift = 4.3 - reach * 0.22 + hash01(seed, 90 + i) * 0.32
+      plates.push({
+        p: [Math.cos(a) * reach, lift, Math.sin(a) * reach],
+        r: [0.85 + hash01(seed, 100 + i) * 0.7, 0.16, 0.85 + hash01(seed, 110 + i) * 0.7],
+        c: tones[i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 2],
+      })
+    }
+    // A low shoulder of foliage under the fan, so it is not a paper disc.
+    for (let i = 0; i < 4; i++) {
+      const a = hash01(seed, 120 + i) * Math.PI * 2
+      plates.push({
+        p: [Math.cos(a) * 1.1, 3.55 + hash01(seed, 130 + i) * 0.4, Math.sin(a) * 1.1],
+        r: [1.0, 0.42, 1.0],
+        c: PARK.canopyDark,
+      })
+    }
+    return plates
+  }, [seed])
   return (
     <group position={[x, 0, z]} scale={s}>
-      <mesh position={[0, 2, 0]}>
-        <cylinderGeometry args={[0.12, 0.28, 4, 6]} />
+      {/* A forked trunk: acacias split low and spread. */}
+      <mesh position={[0, 1.9, 0]} rotation={[0, 0, 0.06]}>
+        <cylinderGeometry args={[0.1, 0.26, 3.8, 5]} />
         <meshLambertMaterial color={PARK.trunk} />
       </mesh>
-      {/* Acacias are umbrella-shaped: broad, flat and very dark against the straw grass. */}
-      <mesh position={[0, 4.1, 0]} scale={[1.18, 0.34, 1]}>
-        <sphereGeometry args={[2.5, 12, 7]} />
-        <meshLambertMaterial color={PARK.canopyDark} />
-      </mesh>
-      <mesh position={[0, 4.32, 0.2]} scale={[0.82, 0.26, 0.7]}>
-        <sphereGeometry args={[2.5, 10, 6]} />
-        <meshLambertMaterial color={PARK.canopyMid} />
-      </mesh>
-      <mesh position={[-0.5, 4.5, -0.3]} scale={[0.46, 0.18, 0.42]}>
-        <sphereGeometry args={[2.5, 8, 5]} />
-        <meshLambertMaterial color={PARK.canopyLit} />
-      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * 0.55, 3.5, 0]} rotation={[0, 0, side * -0.62]}>
+          <cylinderGeometry args={[0.06, 0.13, 1.7, 4]} />
+          <meshLambertMaterial color={PARK.trunk} />
+        </mesh>
+      ))}
+      {crown.map((b, i) => (
+        <mesh key={i} position={b.p} scale={b.r}>
+          {/* Icosahedron, not sphere: faceted crowns read as foliage, smooth ones as plastic. */}
+          <icosahedronGeometry args={[1, 0]} />
+          <meshLambertMaterial color={b.c} flatShading />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -437,7 +468,7 @@ function Park() {
         <meshLambertMaterial color={PARK.earth} />
       </mesh>
       {TREES.map(([x, z, s], i) => (
-        <Acacia key={i} x={x} z={z} s={s} />
+        <Acacia key={i} x={x} z={z} s={s} seed={i + 1} />
       ))}
       {ROCKS.map((r, i) => (
         <mesh key={i} position={[r.x, r.s * 0.22, r.z]} scale={[r.s * 1.5, r.s * 0.5, r.s]}>
@@ -525,7 +556,7 @@ function Rail() {
         ))}
       </group>
       {[-25, -15, 15, 27].map((x, i) => (
-        <Acacia key={x} x={x} z={i % 2 ? -14 : 12} s={0.8} />
+        <Acacia key={x} x={x} z={i % 2 ? -14 : 12} s={0.8} seed={i + 21} />
       ))}
       {Array.from({ length: 8 }, (_, i) => (
         <mesh key={i} position={[-34 + i * 9, 2 + (i % 3), -32]}>

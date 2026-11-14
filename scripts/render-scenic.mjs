@@ -132,22 +132,45 @@ function build(t = Math.PI / 2) {
   }
   scene.add(sky)
 
-  // acacias
-  for (const [x, z, s] of treeRows) {
+  // acacias: faceted umbrella crowns, mirroring the component
+  const leaf = [PAL.canopyDark, PAL.canopyMid, PAL.canopyLit]
+  for (const [x, z, sc] of treeRows) {
     const g = new THREE.Group()
     g.position.set(x, 0, z)
-    g.scale.setScalar(s)
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.28, 4, 6), mat(PAL.trunk))
-    trunk.position.y = 2
+    g.scale.setScalar(sc)
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.26, 3.8, 5), mat(PAL.trunk))
+    trunk.position.y = 1.9
     g.add(trunk)
-    const c1 = new THREE.Mesh(new THREE.SphereGeometry(2.5, 12, 7), mat(PAL.canopyDark))
-    c1.position.y = 4.1
-    c1.scale.set(1.18, 0.34, 1)
-    g.add(c1)
-    const c2 = new THREE.Mesh(new THREE.SphereGeometry(2.5, 10, 6), mat(PAL.canopyMid))
-    c2.position.set(0, 4.32, 0.2)
-    c2.scale.set(0.82, 0.26, 0.7)
-    g.add(c2)
+    for (const side of [-1, 1]) {
+      const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.13, 1.7, 4), mat(PAL.trunk))
+      fork.position.set(side * 0.55, 3.5, 0)
+      fork.rotation.z = side * -0.62
+      g.add(fork)
+    }
+    const seed = treeRows.indexOf(treeRows.find((t) => t[0] === x && t[1] === z)) + 1
+    for (let i = 0; i < 11; i++) {
+      const a = hash01(seed, 70 + i) * Math.PI * 2
+      const reach = Math.sqrt(hash01(seed, 80 + i)) * 2.9
+      const lift = 4.3 - reach * 0.22 + hash01(seed, 90 + i) * 0.32
+      const plate = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1, 0),
+        mat(leaf[i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 2]),
+      )
+      plate.position.set(Math.cos(a) * reach, lift, Math.sin(a) * reach)
+      plate.scale.set(0.85 + hash01(seed, 100 + i) * 0.7, 0.16, 0.85 + hash01(seed, 110 + i) * 0.7)
+      g.add(plate)
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = hash01(seed, 120 + i) * Math.PI * 2
+      const shoulder = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), mat(PAL.canopyDark))
+      shoulder.position.set(
+        Math.cos(a) * 1.1,
+        3.55 + hash01(seed, 130 + i) * 0.4,
+        Math.sin(a) * 1.1,
+      )
+      shoulder.scale.set(1.0, 0.42, 1.0)
+      g.add(shoulder)
+    }
     scene.add(g)
   }
 

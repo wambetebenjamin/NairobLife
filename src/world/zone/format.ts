@@ -152,8 +152,17 @@ export interface ZoneFile {
   waterways: ZoneLine[]
   areas: ZoneArea[]
   places: ZonePlace[]
-  /** Individually mapped trees, flat [x, z, ...]. Parks get more, scattered at load time. */
+  /**
+   * Individually mapped trees, flat [x, z, ...]. Parks get more, scattered at load time.
+   *
+   * `treeKinds` is parallel to this, one entry per pair, and only present when OpenStreetMap
+   * actually said something about the tree. 0 = no tag, 1 = broadleaved, 2 = evergreen,
+   * 3 = palm/arecaceae, 4 = conifer. Most of Nairobi's mapped trees carry nothing but
+   * `natural=tree`, so absence here is normal and the caller falls back to a seed.
+   */
   trees: number[]
+  /** Optional: one species code per mapped tree, in the same order as `trees`. */
+  treeKinds?: number[]
   pois: ZonePoi[]
 }
 
@@ -172,3 +181,18 @@ export const DRIVABLE: Record<RoadKind, boolean> = {
   footway: false,
   steps: false,
 }
+
+/**
+ * Species codes carried in `ZoneFile.treeKinds`.
+ *
+ * These are the only things OpenStreetMap actually told us about a tree. `species` and
+ * `genus` are rare in Nairobi's data; `leaf_type` and `leaf_cycle` are what is there.
+ */
+export const TREE_KINDS = {
+  unknown: 0,
+  broadleaved: 1,
+  evergreen: 2,
+  palm: 3,
+  conifer: 4,
+} as const
+export type TreeKind = (typeof TREE_KINDS)[keyof typeof TREE_KINDS]
