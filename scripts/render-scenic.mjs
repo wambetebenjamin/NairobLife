@@ -18,9 +18,51 @@ const THREE = await import('three')
 const { SVGRenderer } = await import('three/examples/jsm/renderers/SVGRenderer.js')
 const { mergeGeometries } = await import('three/examples/jsm/utils/BufferGeometryUtils.js')
 
+// The palette moved into its own module so the tests can import the values that ship; the
+// component no longer holds them. Read the palette from there and the rest of the scene
+// numbers (camera, towers, trees) from the component.
 const src = readFileSync('src/ui/ScenicPreview.tsx', 'utf8')
+const PAL_SRC = readFileSync('src/ui/scenic/parkPalette.ts', 'utf8')
 const PAL = {}
-for (const m of src.matchAll(/(\w+): '(#[0-9a-f]{6})'/g)) PAL[m[1]] = m[2]
+for (const m of PAL_SRC.matchAll(/(\w+): '(#[0-9a-f]{6})'/g)) PAL[m[1]] = m[2]
+if (!PAL.tower) throw new Error('palette not found in src/ui/scenic/parkPalette.ts')
+
+// --- distance haze, mirrored from src/ui/scenic/haze.ts -------------------------------------
+// Node cannot import the .ts module without a loader, so the two constants and the two
+// functions are reimplemented here and `scripts/check-haze-parity.py` holds them in step.
+const HAZE_SRC = readFileSync('src/ui/scenic/haze.ts', 'utf8')
+const HAZE_NEAR = Number(HAZE_SRC.match(/HAZE_NEAR = ([\d.]+)/)[1])
+const HAZE_FAR = Number(HAZE_SRC.match(/HAZE_FAR = ([\d.]+)/)[1])
+const HAZE_SKY = HAZE_SRC.match(/HAZE_SKY = '(#[0-9a-f]{6})'/)[1]
+const HAZE_HORIZON = HAZE_SRC.match(/HAZE_HORIZON = '(#[0-9a-f]{6})'/)[1]
+
+const hazeAt = (distance, height, reach = 62) => {
+  const far = Math.min(1, Math.max(0, distance / reach))
+  const thin = 1 - Math.min(0.55, Math.max(0, height) / 55)
+  return HAZE_NEAR + (HAZE_FAR - HAZE_NEAR) * far * far * thin
+}
+const hazed = (hex, amount) => {
+  const parse = (v) => {
+    const n = parseInt(v.replace('#', ''), 16)
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  }
+  const a = parse(hex)
+  const b = parse(HAZE_HORIZON)
+  const t = Math.min(1, Math.max(0, amount))
+  return (
+    '#' +
+    a
+      .map((v, i) =>
+        Math.round(v + (b[i] - v) * t)
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  )
+}
+const SKYLINE_Z = Number(src.match(/const SKYLINE_Z = (\d+)/)?.[1] ?? 62)
+const SKYLINE_HAZE = hazeAt(SKYLINE_Z, 3)
+const VEIL_BANDS = [0, 0.2, 0.4, 0.6, 0.8]
 
 // The numbers that drive the scene, taken from the source so the picture cannot drift.
 const num = (re, fallback) => Number(src.match(re)?.[1] ?? fallback)
@@ -42,7 +84,7 @@ const treeRows = [...src.matchAll(/\[(-?\d+), (-?\d+), ([\d.]+)\],/g)].map((m) =
   +m[2],
   +m[3],
 ])
-const tones = [PAL.tower, PAL.towerLight, PAL.towerGlass]
+const tones = [PAL.tower, PAL.towerLight, PAL.towerGlass].map((c) => hazed(c, SKYLINE_HAZE))
 
 function hash01(n, salt = 0) {
   let h = (Math.imul(n | 0, 0x9e3779b1) ^ Math.imul((salt + 1) | 0, 0x85ebca6b)) >>> 0
@@ -57,7 +99,6 @@ const mat = (color, extra) => new THREE.MeshLambertMaterial({ color, ...extra })
 
 function build(t = Math.PI / 2) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(PAL.skyHorizon)
   // The component uses a HemisphereLight, which SVGRenderer cannot shade. Substitute a
   // slightly dimmer ambient so the preview is readable; this is a harness limitation, not
   // a difference in the shipped scene.
@@ -82,7 +123,15 @@ function build(t = Math.PI / 2) {
   scene.add(
     new THREE.Mesh(
       skyGeo,
-      new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false }),
+      // The shipped scene uses BackSide, which is correct. three's SVGRenderer backface-culls
+      // it away entirely -- measured: BackSide draws 0 of 1 faces, DoubleSide draws 1 -- so the
+      // harness renders it two-sided or it would silently draw no sky at all and report the
+      // background colour as if that were the dome.
+      new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
     ),
   )
 
@@ -102,14 +151,15 @@ function build(t = Math.PI / 2) {
   tg.computeVertexNormals()
   scene.add(new THREE.Mesh(tg, mat(PAL.grassMid, { side: THREE.DoubleSide })))
 
-  // ridges
+  // ridges. They are further back than the skyline, so they get at least as much haze.
   for (const [z, col, height] of [
     [-118, PAL.ridgeFar, 13],
     [-104, PAL.ridgeNear, 7],
   ]) {
     const m = new THREE.Mesh(
       new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-      mat(col),
+      // Basic, not Lambert: a lit ridge ends up brighter than the sky it stands in front of.
+      new THREE.MeshBasicMaterial({ color: hazed(col, hazeAt(Math.abs(z), height / 2)) }),
     )
     m.position.set(0, 0, z)
     m.scale.set(150, height, 26)
@@ -118,16 +168,32 @@ function build(t = Math.PI / 2) {
 
   // skyline
   const sky = new THREE.Group()
-  sky.position.z = -62
+  sky.position.z = -SKYLINE_Z
+  const warm = hazed(PAL.towerWarm, SKYLINE_HAZE)
   for (const [x, hgt, w, tone] of towerRows) {
     const g = new THREE.Group()
     g.position.x = x
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, w), mat(tones[tone]))
     b.position.y = hgt / 2
     g.add(b)
-    const f = new THREE.Mesh(new THREE.BoxGeometry(w * 0.72, hgt * 0.86, 0.04), mat(PAL.towerWarm))
+    const f = new THREE.Mesh(new THREE.BoxGeometry(w * 0.72, hgt * 0.86, 0.04), mat(warm))
     f.position.set(0, hgt / 2, w / 2 + 0.02)
     g.add(f)
+    // stacked haze bands, densest at the base (mirrors VEIL_BANDS in the component)
+    for (const t of VEIL_BANDS) {
+      const veil = new THREE.Mesh(
+        new THREE.BoxGeometry(w * 1.04, hgt / VEIL_BANDS.length, w * 1.04),
+        new THREE.MeshBasicMaterial({
+          color: PAL.skyHorizon,
+          transparent: true,
+          opacity: 0.14 + 0.5 * (1 - t) * (1 - t),
+          depthWrite: false,
+        }),
+      )
+      veil.position.y = hgt * (t + 0.5 / VEIL_BANDS.length)
+      veil.renderOrder = 1
+      g.add(veil)
+    }
     sky.add(g)
   }
   scene.add(sky)

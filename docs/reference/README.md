@@ -74,13 +74,23 @@ Recorded here so the next person does not have to redo the sampling. Reference v
 buildings and grass come from `giraffe-skyline-haze.jpg`; the sky figure comes from
 `skyline-savannah-overcast.jpg`, because the giraffe photo is dominated by a hazy upper sky.
 
-| Quantity | Observed | Diorama before |
-| --- | --- | --- |
-| Sky saturation | **0.06** (near-neutral, overcast) | 0.29 (too blue) |
-| Building luminance ÷ grass luminance | **1.18** (haze lifts buildings above the straw) | 0.93 (buildings darker than the ground) |
-| Building saturation | **0.02** (almost grey) | 0.17 (too coloured) |
-| Grass | `rgb(172,137,83)`, sat **0.52** | `rgb(187,157,87)`, sat 0.53 |
+| Quantity                   | Reference         | Before            | After     |
+| -------------------------- | ----------------- | ----------------- | --------- |
+| Sky saturation             | **0.06**          | 0.29              | **0.06**  |
+| Sky luminance              | **0.74**          | 0.61              | **0.71**  |
+| Building saturation        | **0.04**          | 0.22              | **0.04**  |
+| Building luminance ÷ grass | **1.31**          | 0.95              | **1.09**  |
+| Grass                      | `rgb(172,138,82)` | `rgb(187,156,87)` | unchanged |
 
 The single largest error they exposed was not colour: the diorama had **no distance haze at
 all**, so a 26 m tower and a 5 m rock were equally crisp and the city looked pasted onto the
-grass rather than standing in the same air.
+grass rather than standing in the same air. The "before" ratio of 0.95 is the symptom: in the
+photograph the air makes distant buildings _lighter_ than the ground in front of them, and the
+diorama had them darker.
+
+The residual gap in the last row is left visible rather than closed. The haze model is tuned so
+a tower's own colour lands at about 1.18x (`src/ui/scenic/haze.test.ts` asserts it), but an
+area average over the render also takes in a pale horizon band and a hazy ridge, pulling the
+figure to 1.09. Closing it would mean either a heavier veil than the photograph supports or
+darker grass than `PARK.grassLit`, which is itself sampled from this photo. That would be
+fitting the number rather than matching the picture.

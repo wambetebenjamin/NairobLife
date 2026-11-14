@@ -7,6 +7,8 @@ import { PlaneGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { hash01 } from '../core/random'
 import { buildParkTerrain } from './scenic/parkTerrain'
+import { hazeAt, hazed } from './scenic/haze'
+import { PARK, SKYLINE_HAZE, SKYLINE_Z, VEIL_BANDS } from './scenic/parkPalette'
 
 export type ScenicKind = 'park' | 'sgr'
 
@@ -244,35 +246,6 @@ function Zebra({ x, z, turn = 0 }: { x: number; z: number; turn?: number }) {
   )
 }
 
-/**
- * Colours sampled from photographs of the real park, not invented. The old scene used a flat
- * `#aaa667` for the ground -- an olive-grey that reads as mud rather than dry grass -- a
- * saturated toy-brown ring for the track, and one `#4c7446` green for every tree. The savannah
- * in the reference photographs is a warm straw-yellow (#9c814a to #b79941) against very dark
- * olive canopies (#2f3217 to #404411), and the interest comes almost entirely from the
- * skyline: sixteen towers standing on the horizon with the park in front of them.
- */
-const PARK = {
-  skyTop: '#3e6b7e',
-  skyHorizon: '#7fa3b3',
-  cloud: '#c3ccd2',
-  cloudShade: '#9aa9b2',
-  ridgeFar: '#998666',
-  ridgeNear: '#6f7355',
-  grassLit: '#a8894a',
-  grassMid: '#9c814a',
-  grassDry: '#b79941',
-  earth: '#8a6f3f',
-  trunk: '#6d5a3c',
-  canopyDark: '#2f3217',
-  canopyMid: '#404411',
-  canopyLit: '#4f5219',
-  tower: '#7d93a0',
-  towerLight: '#b3b8b6',
-  towerGlass: '#48697a',
-  towerWarm: '#8f8371',
-} as const
-
 /** Deterministic positions, so the diorama is the same every time it is opened. */
 const TUFTS = Array.from({ length: 620 }, (_, i) => {
   const a = hash01(i, 11) * Math.PI * 2
@@ -359,10 +332,14 @@ function SkyDome() {
  * radius 110, which also made it 110 tall and swallowed the skyline completely.
  */
 function Ridge({ z, color, height }: { z: number; color: string; height: number }) {
+  // Unlit on purpose. A Lambert ridge picks up the sun AFTER its colour has been hazed, so it
+  // came out brighter than the sky behind it and read as a pale dune rather than a treeline.
+  // In giraffe-skyline-haze.jpg the distant vegetation is a silhouette: luminance 0.56 against
+  // 0.67 for the sky above it. The colour here is already the finished, haze-washed colour.
   return (
     <mesh position={[0, 0, z]} scale={[150, height, 26]}>
       <sphereGeometry args={[1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      <meshLambertMaterial color={color} />
+      <meshBasicMaterial color={hazed(color, hazeAt(Math.abs(z), height / 2))} />
     </mesh>
   )
 }
@@ -394,26 +371,54 @@ function Skyline() {
     [28, 11, 2.4, 1],
     [31, 16, 2.8, 0],
   ]
-  const tones = [PARK.tower, PARK.towerLight, PARK.towerGlass]
+  // The skyline is 62 m back, so every one of its colours is washed toward the horizon haze.
+  // Measured from the reference this is what puts the towers at ~1.18x the straw's luminance
+  // instead of below it. See src/ui/scenic/haze.ts.
+  const tones = [PARK.tower, PARK.towerLight, PARK.towerGlass].map((c) => hazed(c, SKYLINE_HAZE))
+  const warm = hazed(PARK.towerWarm, SKYLINE_HAZE)
+  const mast = hazed(PARK.towerLight, SKYLINE_HAZE)
   return (
-    <group name="skyline" position={[0, 0, -62]}>
+    <group name="skyline" position={[0, 0, -SKYLINE_Z]}>
       {towers.map(([x, h, w, tone], i) => (
         <group key={i} position={[x, 0, 0]}>
           <mesh position={[0, h / 2, 0]}>
             <boxGeometry args={[w, h, w]} />
             <meshLambertMaterial color={tones[tone]} />
           </mesh>
-          {/* A darker glazed face so the towers read as buildings rather than blocks. */}
+          {/* A slightly warmer glazed face so the towers read as buildings rather than blocks.
+              It is hazed too: a pane of glass 62 m away is as washed out as the wall beside it. */}
           <mesh position={[0, h / 2, w / 2 + 0.02]}>
             <boxGeometry args={[w * 0.72, h * 0.86, 0.04]} />
-            <meshLambertMaterial color={PARK.towerWarm} />
+            <meshLambertMaterial color={warm} />
           </mesh>
           {i % 3 === 0 && (
             <mesh position={[0, h + 1.2, 0]}>
               <cylinderGeometry args={[0.08, 0.14, 2.4, 4]} />
-              <meshLambertMaterial color={PARK.towerLight} />
+              <meshLambertMaterial color={mast} />
             </mesh>
           )}
+          {/* The veil: stacked translucent bands, densest at the base. Air is denser near the
+              ground, so a tower's base dissolves while its crown stays legible -- that vertical
+              falloff is most of what makes a skyline read as distant. three's Fog cannot do
+              this, it is distance-only, and a smooth per-vertex ramp cannot be verified here
+              because SVGRenderer flattens vertex colours to one tone per face. Bands are
+              coarse but they are real, and the render harness can show them. */}
+          {VEIL_BANDS.map((t, b) => (
+            <mesh
+              key={`veil-${b}`}
+              position={[0, h * (t + 0.5 / VEIL_BANDS.length), 0]}
+              renderOrder={1}
+              raycast={() => null}
+            >
+              <boxGeometry args={[w * 1.04, h / VEIL_BANDS.length, w * 1.04]} />
+              <meshBasicMaterial
+                color={PARK.skyHorizon}
+                transparent
+                opacity={0.14 + 0.5 * (1 - t) * (1 - t)}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
         </group>
       ))}
     </group>
