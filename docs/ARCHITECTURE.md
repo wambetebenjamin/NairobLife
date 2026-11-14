@@ -224,6 +224,8 @@ looking:
   named stage has a matatu;
 - that no tree stands in a carriageway or inside a building, including the few hundred the
   map places individually -- some of those nodes sit in the street beside them;
+- that the traffic graph drops a segment that is buried inside a building rather than
+  routing cars through a wall, while keeping segments that only clip a wall at a junction;
 - the player's own legs, against Rapier's character controller set up exactly as
   `Player.tsx` sets it up: a kerb up to 0.5 m is stepped over, and a loading dock is a
   wall. Measured, the real limit is about 0.51 m for the configured 0.45 m, because

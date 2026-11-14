@@ -79,7 +79,10 @@ Phase 3 is in progress. Later phases are plans, not promises.
       wait for an unoccupied location away from the player and camera. A spawn is also
       rejected if the car's body would intersect one already placed, so no two vehicles
       start inside each other, and if it would land inside a building -- the road graph is
-      drawn from the map, and 19 buildings in the CBD have a street drawn through them. This is still not a complete traffic simulation: restarts
+      drawn from the map, and 19 buildings in the CBD have a street drawn through them.
+      The graph itself also leaves out any segment whose whole carriageway is inside a
+      building, so traffic is not only kept from starting in a wall but never routed
+      through one. This is still not a complete traffic simulation: restarts
       are not seamless and elevated roads are not used.
 - [x] Three fictional police patrol motorcycles among CBD traffic, with helmeted riders,
       marked uniforms and blue lights. They follow ordinary ambient traffic rules; there
