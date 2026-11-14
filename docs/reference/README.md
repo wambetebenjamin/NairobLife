@@ -1,55 +1,96 @@
-# Reference: CodedLife (codedlife.app)
+# Reference photographs
 
-kaNAIRO is inspired by [CodedLife](https://codedlife.app), a browser game that turns
-Accra, Ghana into a playable open world. This folder holds what we learned from it.
+These are real photographs of Nairobi National Park and the Nairobi CBD. They exist so that
+the diorama's palettes, proportions and haze can be checked against something observed
+rather than against memory.
 
-- `codedlife-page-source.html` is the "view source" capture of the CodedLife landing page
-  that was uploaded to this repo. It contains **markup only** (no game code, no assets).
-  It is kept for reference and is not shipped, imported, or copied from.
+**This directory is reference only. No image here is shipped in the built game, drawn as a
+texture, or used as an asset.** The game builds its geometry from OpenStreetMap and its
+colours from the measurements recorded below.
 
-> We take the _idea_ and the _feature shape_. All kaNAIRO code, art, copy and data
-> pipelines are original. Do not paste CodedLife code, CSS, icons or text into `src/`.
+## Why these and not others
 
-## What the reference game is
+Every photo here was chosen because its licence permits redistribution in a public
+repository. Searching for "Nairobi National Park" mostly returns Adobe Stock, Getty and
+iStock results, and those are **not** usable: their preview images are still copyright the
+photographer or agency, and committing one to a public repo would be a licence violation,
+not a citation. They were used to check a measurement and then discarded. If a photo is not
+in this directory, assume it was not licensed for distribution.
 
-| Area       | What CodedLife does                                                                                                                        | Evidence in the page source                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| World      | Real city built from OpenStreetMap, hand-made hero landmarks on top                                                                        | modules named `accra-geodata`, `buildings`, `road-mesh`, `landmarks`, `balme-library`, `great-hall`, `accra-mall` |
-| Modes      | Free roam, plus a 40-fighter battle royale on a university campus                                                                          | menu items, `game/match`, `game/storm`, `game/loot`, `game/bots`                                                  |
-| Movement   | Walk, sprint, crouch, slide, jump, ledge/wall climb, jetpack                                                                               | loading tips and the controls table                                                                               |
-| Vehicles   | Taxis, trotros (shared minibuses), bikes; boost; flip-upright prompt; cars burn and explode                                                | `game/vehicles`, `trotro`, `traffic`, `#flip-prompt`                                                              |
-| Life       | Traffic and pedestrians on the road network                                                                                                | `traffic`, `pedestrians`, `pedestrian-routes`, `road-network`                                                     |
-| Sky        | 24-minute day cycle, season-aware haze (Harmattan dust)                                                                                    | `day-cycle`, `lighting`, clock tooltip, loading tip                                                               |
-| Navigation | Teleport list, radar minimap, full-screen street atlas with search and GPS route                                                           | `#teleport-popover`, `#minimap-canvas`, `#fullmap-modal`                                                          |
-| Input      | Keyboard + mouse, gamepad, touch stick with drag-to-look and pinch zoom                                                                    | `controllers`, `gamepad-controls`, `touch-controls`                                                               |
-| Shell      | Staged loading screen with rotating tips, menu over the live city, settings tabs (view, graphics, audio, controls, accessibility, privacy) | `#loading-overlay`, `#menu`, `#settings`                                                                          |
-| Online     | Accounts, presence count, city chat, rooms with voice, coins/wallet, billboards                                                            | `account`, `presence`, `city-chat`, `interiors/room-voice`, `wallet`, `billboards`                                |
+## The images
 
-Technically it is vanilla three.js (the WebGPU build with TSL materials) loaded through an
-import map from a CDN, split into ~90 hand-written ES modules, with no framework and no
-bundler. Quality is `auto / high / medium / low`, where auto steps down when frames run slow.
+### `giraffe-skyline-haze.jpg`
 
-## What we adopt for Nairobi
+- **Subject** A lone Maasai giraffe with the Nairobi skyline directly behind it.
+- **Author** Mkimemia (English Wikipedia)
+- **Date** 16 October 2006
+- **Source** https://commons.wikimedia.org/wiki/File:A_lone_giraffe_in_Nairobi_National_Park.jpg
+- **Licence** [CC BY-SA 3.0 Unported](https://creativecommons.org/licenses/by-sa/3.0/deed.en), also GFDL 1.2+
+- **Why it matters** This is the composition the diorama is trying to hit: game in the
+  foreground, city immediately behind. It is also the clearest example of atmospheric haze
+  washing the towers toward the sky, which the diorama had no implementation of at all.
 
-- **Real geography first.** OSM footprints and streets, real names, real coordinates.
-- **Loading that feels alive.** A staged progress bar ("Starting the engine…"), local tips.
-- **HUD layout.** Toolbar top-right, street name + radar bottom-left, speed cluster
-  bottom-right, controls hint bottom-centre.
-- **Teleports to landmarks** as the quick way across a big map.
-- **Season-aware sky.** Their Harmattan becomes our dry-season dust.
-- **Input parity.** Keyboard/mouse, touch, and (later) gamepad drive one shared input state.
-- **Quality tiers** with an automatic fallback so mid-range laptops and phones stay smooth.
+### `skyline-savannah-overcast.jpg`
 
-## What we do differently (on purpose)
+- **Subject** The Nairobi skyline seen from the park's savannah on an overcast afternoon.
+- **Author** Timothy A. Gonsalves ([User:Tagooty](https://commons.wikimedia.org/wiki/User:Tagooty))
+- **Date** 4 May 2019, 15:01
+- **Source** https://commons.wikimedia.org/wiki/File:Nairobi_Skyline_Savannah_Kenya_May19_R1600687.jpg
+- **Licence** [CC BY-SA 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/deed.en)
+- **Why it matters** The honest counterweight to the more dramatic photos: under flat light
+  the skyline is small on the horizon and nearly colourless. Useful for not over-tuning the
+  diorama against a golden-hour shot and calling it a bug.
 
-| Topic         | CodedLife                      | kaNAIRO                                                                       | Why                                                                                                                        |
-| ------------- | ------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Rendering     | three.js WebGPU + TSL, vanilla | React Three Fiber on WebGL2                                                   | Widest device reach today (phones in particular), and a component model that scales with a team. WebGPU is a later opt-in. |
-| Build         | Import map + CDN, no bundler   | Vite, hashed assets, self-hosted fonts                                        | Works offline, cacheable forever, no third-party runtime dependency.                                                       |
-| Physics       | Custom                         | Rapier (WASM)                                                                 | A robust character controller, and collision queries for our own driving model.                                            |
-| Map data      | Shipped as JS modules          | Compact baked JSON per zone, meshed in a Web Worker                           | Small download, no main-thread stall, zones can stream in later.                                                           |
-| Local flavour | Trotros, taxis, Harmattan      | Matatus, boda bodas (nduthi), Sheng UI text, jacaranda season, the Expressway | It should feel like Nairobi, not a reskin.                                                                                 |
+### `acacia-tree.jpg`
 
-## Feature parity checklist
+- **Subject** A mature flat-topped acacia in Amboseli National Park.
+- **Author** Skymani87
+- **Date** 1 June 2019, 15:33
+- **Source** https://commons.wikimedia.org/wiki/File:Acacia_tree_in_Amboseli_National_Park.jpg
+- **Licence** [CC BY-SA 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/deed.en)
+- **Why it matters** The canopy reference. A real acacia crown is a flat, spreading umbrella
+  on a forked trunk — nowhere near a sphere.
 
-Tracked in [`docs/ROADMAP.md`](../ROADMAP.md).
+### `kicc.jpg`
+
+- **Subject** The Kenyatta International Convention Centre, the tower at the world origin
+  (`WORLD_ORIGIN` in `src/config/zones.ts` is KICC itself).
+- **Author** K.Gituma ([User:Mwenjew](https://commons.wikimedia.org/wiki/User:Mwenjew))
+- **Date** 16 September 2012, 15:01
+- **Source** https://commons.wikimedia.org/wiki/File:KICC-.JPG
+- **Licence** [CC BY-SA 3.0 Unported](https://creativecommons.org/licenses/by-sa/3.0/deed.en)
+- **Why it matters** The landmark the skyline is anchored on, in daylight, for silhouette and
+  colour.
+
+## Changes made
+
+All four were resized so the long edge is at most 1200 px and re-encoded as JPEG at quality
+88, to keep the repository small. No cropping, colour grading or retouching. CC BY-SA asks
+that modifications be indicated, so: **resized and re-compressed**.
+
+## Measurements taken from these
+
+Recorded here so the next person does not have to redo the sampling. Reference values for
+buildings and grass come from `giraffe-skyline-haze.jpg`; the sky figure comes from
+`skyline-savannah-overcast.jpg`, because the giraffe photo is dominated by a hazy upper sky.
+
+| Quantity                   | Reference         | Before            | After     |
+| -------------------------- | ----------------- | ----------------- | --------- |
+| Sky saturation             | **0.06**          | 0.29              | **0.06**  |
+| Sky luminance              | **0.74**          | 0.61              | **0.71**  |
+| Building saturation        | **0.04**          | 0.22              | **0.04**  |
+| Building luminance ÷ grass | **1.31**          | 0.95              | **1.09**  |
+| Grass                      | `rgb(172,138,82)` | `rgb(187,156,87)` | unchanged |
+
+The single largest error they exposed was not colour: the diorama had **no distance haze at
+all**, so a 26 m tower and a 5 m rock were equally crisp and the city looked pasted onto the
+grass rather than standing in the same air. The "before" ratio of 0.95 is the symptom: in the
+photograph the air makes distant buildings _lighter_ than the ground in front of them, and the
+diorama had them darker.
+
+The residual gap in the last row is left visible rather than closed. The haze model is tuned so
+a tower's own colour lands at about 1.18x (`src/ui/scenic/haze.test.ts` asserts it), but an
+area average over the render also takes in a pale horizon band and a hazy ridge, pulling the
+figure to 1.09. Closing it would mean either a heavier veil than the photograph supports or
+darker grass than `PARK.grassLit`, which is itself sampled from this photo. That would be
+fitting the number rather than matching the picture.
