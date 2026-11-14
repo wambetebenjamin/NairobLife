@@ -21,6 +21,7 @@
     "osm:fetch": "tsx scripts/osm/fetch.ts",
     "osm:bake": "tsx scripts/osm/bake.ts",
     "osm:preview": "tsx scripts/osm/preview.ts",
+    "osm:audit": "tsx scripts/osm/audit.ts",
     "osm": "npm run osm:fetch && npm run osm:bake"
   },
   "dependencies": {

@@ -1,0 +1,24 @@
+Add `npm run osm:audit`: how much of the city is observed, and how much is ours
+
+The bake has always flagged each building it had to guess (`est: 1`), but nothing ever
+summarised it, so there was no way to see the ratio at a glance. This prints it per zone:
+real versus estimated heights, the tallest things in the skyline and whether they are real,
+the named landmarks that carry no height, and the tree species split.
+
+    nairobi-cbd
+      buildings 3072   real height 251 (8%)   estimated 2821   named 437
+      tallest 140 m REAL Times Tower ...
+      named landmarks with no height in OSM: 292
+      trees 271   with a species or leaf type 43   unknown 228
+
+It immediately surfaced something worth knowing: KICC, the building at the world origin
+(WORLD_ORIGIN is KICC), exists in OSM as three separate buildings. Only the 105 m convention
+tower carries a real height; the 58.6 m slab and the amphitheatre are both guesses. The
+landmark itself was correct -- LANDMARKS references geometry, not heights -- but the number
+printed in the audit is the honest one.
+
+An earlier count said 298 named buildings had no height; that was counted against the raw
+OSM extract, before the bake merges 3D parts back into outlines and drops some duplicates.
+292 is the number that survives into the baked zone, so 292 is what this reports.
+
+376 tests, 39 files, lint and format clean.
