@@ -44,3 +44,38 @@ removed**, and fix 3's test also fails when its threshold is loosened enough to 
 streets — so it cannot be "fixed" later by over-deleting.
 
 `npm run check`: **359 tests**, 37 files, green.
+
+## The National Park diorama, rebuilt
+
+The diorama was the weakest thing in the game and the user said so. It was not a limitation
+of the approach -- it was four mistakes, only one of which was visible by reading the code.
+
+| Problem                        | Measured                                                            | Fix                                                      |
+| ------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| Palette invented, not observed | ground `#aaa667` (olive-grey) vs the real straw `#9c814a`–`#b79941` | colours sampled from reference photographs               |
+| Over-lit by 3.4×               | ambient 1.4 + directional 2 washed straw to pale sand `#e7cb9c`     | hemisphere + sun at real daylight ratios                 |
+| **Ground lit pure black**      | `computeVertexNormals()` returned **4,225 / 4,225 zero normals**    | rotate the plane flat _before_ displacing it             |
+| Skyline absent from frame      | 12 grey boxes hidden behind a 110 m-radius hill                     | 19 towers on the horizon, 2 ridgelines, camera on an arc |
+
+The third one is the interesting one. `PlaneGeometry` lies in its own XY plane; writing
+heights into Y and only then rotating the _mesh_ leaves every triangle edge-on to the plane
+it was generated from, so the normals come back all zero and the ground renders black. It
+looks like a missing mesh, not a lighting bug, which is why it survived. `rotateX(-PI/2)` on
+the _geometry_ before displacing fixes it, and `parkTerrain.test.ts` now pins both the fix and
+the failure (it asserts the broken order really does produce 4,225 zero normals).
+
+The camera had the same flavour of invisible bug: a full circle orbit spent half the loop
+pointing away from the skyline with an empty foreground, and at side views the animals left
+the frame entirely. It now runs an arc of ±0.85 rad across the front; measured at 32/32
+sampled frames, animals and skyline are both in view.
+
+### How this was verified without a browser
+
+`scripts/render-scenic.mjs` builds the scene in node and renders it through three.js's real
+projection pipeline with `SVGRenderer`, then `scripts/svg-to-png.py` rasterises the flat
+triangles. It cannot show shaders or exact lighting, but it catches what mattered here:
+something seen edge-on, hidden inside something else, or out of frame.
+`docs/notes/img/park-real-render.png` is that output.
+
+`scripts/check-terrain-parity.py` keeps the harness's copy of the terrain formula in step with
+the real module, so the picture cannot quietly drift from the shipped code.
