@@ -130,6 +130,42 @@ Limits that a fresh fetch will **not** fix:
 - **Shop fronts and window styles are invented.** They are chosen from the building's id,
   so they are stable between runs, but they say nothing about the real facade.
 
+## Exporting the city to Blender, UE5 or a glTF viewer
+
+```sh
+npm run osm:export                       # dist/export/nairobi-cbd.glb
+npm run osm:export -- --out ~/city.glb   # somewhere else
+npm run osm:export -- --no-trees         # lighter file, for lighting or framing work
+```
+
+The game builds its geometry in a Web Worker from plain typed arrays
+(`src/world/geometry/*`). Those builders do not touch three.js or the DOM, so this script
+runs them under Node and then hands the result to three's own `GLTFExporter`. What arrives
+in Blender is the same triangles that are walked around in the browser, not a second
+implementation of the city that can drift away from the first.
+
+Current output for `nairobi-cbd`: **3,072 buildings, 2,330 trees, 769,937 triangles,
+34 MB**, and about **2.4 km × 2.3 km** across, standing 140 m at its tallest (Times Tower's
+real OSM height).
+
+| Thing          | Detail                                                                                                                                                                     |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coordinates    | glTF is Y-up and so is the game, so no axis swap. **X is east, Z is south**, metres.                                                                                       |
+| Origin         | x=0, z=0 is the zone's `origin`. The export prints the latitude/longitude and the metres per degree of longitude, to get back to WGS84.                                    |
+| Colour         | Baked into `COLOR_0`; every primitive carries it. Materials are neutral `MeshStandardMaterial`, so a lighting rig behaves.                                                 |
+| Grouping       | One node per 400 m block, named `buildings_<n>_<cx>_<cz>`, plus `ground`, `raised` and `trees_<cx>_<cz>`. Handy for culling or for selecting a district.                   |
+| Lost in export | The `facade` vertex attribute and the window shader that reads it (`src/world/materials/buildingMaterial.ts`). Windows are drawn procedurally in the game only.            |
+| Heuristic      | Heights marked `est` in the zone file were estimated in the bake. The exporter prints how many are measured and how many are not, because the file itself cannot tell you. |
+
+Two things worth knowing before anyone starts building on top of a `.glb`:
+
+- It is a **snapshot**. Re-run `osm:export` after a re-bake; it is not part of the site build.
+- It is **not** game-ready for UE5 in the sense of LODs and lightmaps: it is one dense
+  mesh per block. That is the right starting point for Blender work, and for turning into
+  Nanite meshes or a splat scene, but nothing here generates those.
+
+`dist/` is gitignored, so the `.glb` is a build product, not something committed.
+
 ## Adding a zone
 
 1. Add an entry to `ZONES` in `src/config/zones.ts` with a bounding box, or flip one of

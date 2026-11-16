@@ -71,17 +71,18 @@ npm run dev
 Open the address it prints (usually <http://localhost:5173>). The map data is already in
 the repository, so there is nothing else to set up and no keys to configure.
 
-| Command               | What it does                                                   |
-| --------------------- | -------------------------------------------------------------- |
-| `npm run dev`         | Start the game with live reload                                |
-| `npm run build`       | Type-check and build the production site into `dist/`          |
-| `npm run preview`     | Serve the production build locally                             |
-| `npm test`            | Run the tests                                                  |
-| `npm run check`       | Type-check, lint, test and build: run this before you push     |
-| `npm run format`      | Format the code with Prettier                                  |
-| `npm run osm:fetch`   | Download fresh map data from OpenStreetMap                     |
-| `npm run osm:bake`    | Turn the raw map data into the file the game loads             |
-| `npm run osm:preview` | Draw the baked map as a flat SVG, to check it without the game |
+| Command               | What it does                                                          |
+| --------------------- | --------------------------------------------------------------------- |
+| `npm run dev`         | Start the game with live reload                                       |
+| `npm run build`       | Type-check and build the production site into `dist/`                 |
+| `npm run preview`     | Serve the production build locally                                    |
+| `npm test`            | Run the tests                                                         |
+| `npm run check`       | Type-check, lint, test and build: run this before you push            |
+| `npm run format`      | Format the code with Prettier                                         |
+| `npm run osm:fetch`   | Download fresh map data from OpenStreetMap                            |
+| `npm run osm:bake`    | Turn the raw map data into the file the game loads                    |
+| `npm run osm:preview` | Draw the baked map as a flat SVG, to check it without the game        |
+| `npm run osm:export`  | Export the baked city as a `.glb` for Blender, UE5 or any glTF viewer |
 
 ## Controls
 

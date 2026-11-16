@@ -71,8 +71,14 @@ class Lathe {
     const facade = options.facade ?? 0
     const seed = options.seed ?? 0
     const rings: number[][] = []
-    for (let i = 0; i < profile.length; i++) {
-      const [radius, height] = profile[i]
+    // A profile that ends at radius 0 (a dome's crown) gives every triangle in its last
+    // band zero area: two coincident rings. Drop that ring and close the shape with a fan
+    // to a single tip vertex instead. Building the ring and then not using it would leave
+    // `segments` orphaned, zero-normal vertices on every crown in the city.
+    const apex = profile[profile.length - 1][0] < 1e-6
+    const used = apex ? profile.slice(0, -1) : profile
+    for (let i = 0; i < used.length; i++) {
+      const [radius, height] = used[i]
       const ring: number[] = []
       for (let s = 0; s < segments; s++) {
         const angle = (s / segments) * Math.PI * 2
@@ -90,11 +96,8 @@ class Lathe {
       }
       rings.push(ring)
     }
-    // A profile that ends at radius 0 (a dome's crown) would give every triangle in its
-    // last band zero area: two coincident rings. Close it with a fan instead.
-    const apex = profile[profile.length - 1][0] < 1e-6
-    const bands = apex ? rings.length - 2 : rings.length - 1
-    for (let i = 0; i < bands; i++) {
+    // Two rings or more, always; the shape is closed at the top by the apex fan or the cap.
+    for (let i = 0; i < rings.length - 1; i++) {
       for (let s = 0; s < segments; s++) {
         const next = (s + 1) % segments
         const a = rings[i][s]
