@@ -139,6 +139,23 @@ export function Player({ start }: { start: TeleportRequest }) {
       return
     }
 
+    // Riding a lift: the car owns the player's position. The capsule is dragged along with
+    // it, so no gravity is applied and the character controller never tries to fall through
+    // a floor that is moving underneath it. `Lifts` writes runtime.player.{x,y,z} each frame.
+    if (runtime.lift) {
+      const at = b.translation()
+      const want = runtime.player
+      // Kinematic, not a teleport: doors, walls and the shaft see a body moving up.
+      b.setNextKinematicTranslation({ x: want.x, y: want.y, z: want.z })
+      sim.vx = sim.vy = sim.vz = 0
+      sim.safe = { x: want.x, y: want.y, z: want.z }
+      // A capsule that has drifted from the car (a frame of lag) is snapped back.
+      if (Math.hypot(at.x - want.x, at.z - want.z) > 2) {
+        b.setTranslation({ x: want.x, y: want.y, z: want.z }, true)
+      }
+      return
+    }
+
     // ------------------------------------------------------------- at the wheel
     if (runtime.driving >= 0) {
       if (sim.crouching) {

@@ -9,7 +9,17 @@
  * so nothing downstream knows which device the player is using.
  */
 
-export type HeldAction = 'forward' | 'back' | 'left' | 'right' | 'sprint' | 'crouch' | 'jump'
+export type HeldAction =
+  | 'forward'
+  | 'back'
+  | 'left'
+  | 'right'
+  | 'sprint'
+  | 'crouch'
+  | 'jump'
+  // Inside a lift, forward/back choose a floor instead of walking. See game/actions.ts.
+  | 'liftUp'
+  | 'liftDown'
 
 export type TapAction =
   | 'teleport'
@@ -22,6 +32,7 @@ export type TapAction =
   | 'timeForward'
   | 'fullscreen'
   | 'enterVehicle'
+  | 'useLift'
   // Reserved for a later phase so muscle memory carries over.
   | 'reconPulse'
 
@@ -38,6 +49,11 @@ export const HELD_KEYS: Record<string, HeldAction> = {
   ShiftRight: 'sprint',
   KeyC: 'crouch',
   Space: 'jump',
+  // The keypad, plus the two keys a rider instinctively reaches for.
+  PageUp: 'liftUp',
+  PageDown: 'liftDown',
+  Numpad8: 'liftUp',
+  Numpad2: 'liftDown',
 }
 
 /**
@@ -58,6 +74,7 @@ export const TAP_KEYS: Record<string, TapAction> = {
   BracketRight: 'timeForward',
   KeyK: 'fullscreen',
   KeyF: 'enterVehicle',
+  KeyE: 'useLift',
   KeyQ: 'reconPulse',
 }
 
@@ -75,6 +92,8 @@ export const CONTROLS_HELP: readonly ControlsRow[] = [
   { keys: ['Shift'], label: 'Sprint' },
   { keys: ['Space'], label: 'Jump' },
   { keys: ['F'], label: 'Drive / get out' },
+  { keys: ['E'], label: 'Lift' },
+  { keys: ['PgUp', 'PgDn'], label: 'Floor (in a lift)' },
   { keys: ['C'], label: 'Crouch' },
   { keys: ['T'], label: 'Teleport / map' },
   { keys: ['V'], label: 'Camera' },

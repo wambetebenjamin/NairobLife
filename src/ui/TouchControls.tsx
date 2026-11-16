@@ -10,11 +10,13 @@
  *
  * TODO(touch): pinch to zoom the camera.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CAMERA } from '../config/game'
-import { enterOrExitVehicle } from '../game/actions'
+import { enterOrExitVehicle, liftFloor } from '../game/actions'
 import { input } from '../input/input'
 import { useGame } from '../state/gameStore'
+import { runtime } from '../state/runtime'
+import { LIFT_REACH } from '../world/lifts/lifts'
 import { useT } from './useT'
 
 /** How far the thumb travels for full speed, in CSS pixels. */
@@ -29,6 +31,22 @@ export function TouchControls() {
   const [crouched, setCrouched] = useState(false)
   const driving = useGame((state) => state.driving)
   const nearVehicle = useGame((state) => state.nearVehicle)
+  // The lift prompt appears on touch whenever the doors are in reach, because there is no
+  // E key to press and no keyboard to tell the player about one.
+  const [lift, setLift] = useState(runtime.liftNear)
+  const riding = useGame((state) => state.ride)
+  useLiftSample(setLift)
+
+  /**
+   * Poll the lift state a few times a second. The lift system writes it every frame; this
+   * only needs to be often enough for a button to appear when a player walks up to a car.
+   */
+  function useLiftSample(set: (value: typeof runtime.liftNear) => void) {
+    useEffect(() => {
+      const timer = window.setInterval(() => set(runtime.liftNear), 200)
+      return () => window.clearInterval(timer)
+    }, [set])
+  }
 
   /** Into the nearest vehicle or out of this one; and let go of anything held on foot. */
   const enterOrExit = () => {
@@ -117,7 +135,31 @@ export function TouchControls() {
       {!knob && <div className="stick stick--idle" />}
 
       <div className="touch__buttons" onPointerDown={(event) => event.stopPropagation()}>
-        {driving ? (
+        {!driving && lift && !riding && (runtime.lift || lift.distance <= LIFT_REACH) ? (
+          <>
+            <button
+              className="pad pad--wide pad--offer"
+              onClick={() => {
+                runtime.liftButton = true
+              }}
+            >
+              {runtime.lift ? t('liftRide') : t('liftCall')}
+              <small>
+                {t('liftFloor')} {lift.floor}
+              </small>
+            </button>
+            {runtime.lift && (
+              <>
+                <button className="pad" onClick={() => liftFloor(1)}>
+                  {t('liftUp')}
+                </button>
+                <button className="pad" onClick={() => liftFloor(-1)}>
+                  {t('liftDown')}
+                </button>
+              </>
+            )}
+          </>
+        ) : driving ? (
           <button className="pad pad--wide pad--offer" onClick={enterOrExit}>
             {t(driving.kind === 'boda' ? 'getOff' : 'getOut')}
           </button>

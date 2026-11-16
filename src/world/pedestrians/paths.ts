@@ -7,6 +7,27 @@ import { TREE_STRIDE, trunkRadius } from '../geometry/trees'
 import { DRIVABLE, type ZoneFile } from '../zone/format'
 import type { ZoneIndex } from '../zone/zoneIndex'
 
+/**
+ * What a person is doing, which decides how they move and how they stand.
+ *
+ * This is the difference between a crowd that reads as people and one that reads as a
+ * animation loop: on a Nairobi pavement somebody is jogging for fitness, somebody is
+ * standing at a stage waiting for a matatu with their weight on one hip, and somebody is
+ * sitting on the kerb. The model is still simple -- each person is one route and one
+ * behaviour, with no interaction between people -- but it is not uniform.
+ */
+export type Activity =
+  /** Walking at an ordinary pace, the default. */
+  | 'walk'
+  /** Running: longer stride, bigger arm swing, leaning forward. */
+  | 'jog'
+  /** Standing at a stage, facing the road, shifting weight. */
+  | 'wait'
+  /** Standing in a loose queue, as at a matatu stage with a full vehicle. */
+  | 'queue'
+  /** Sitting on a low wall or a kerb, one knee up. */
+  | 'sit'
+
 export interface WalkingPath {
   ax: number
   az: number
@@ -18,24 +39,36 @@ export interface WalkingPath {
   seed: number
   /** Idle briefly at the end of a walking segment. */
   pause?: number
+  /** What this person is doing. Absent means 'walk'. */
+  activity?: Activity
+  /** Where the person stands when not walking — the stage or the kerb. */
+  stand?: { x: number; z: number }
 }
 
-/** Build a bounded crowd, distributed across the city, with clear paths near the start. */
-export function planPedestrians(
-  zone: ZoneFile,
+/** How fast each activity moves, in m/s, before the per-person variation. */
+export const PACE: Record<Activity, number> = {
+  walk: 1.15,
+  jog: 2.9,
+  wait: 0,
+  queue: 0,
+  sit: 0,
+}
+
+/** Whether an activity moves at all. */
+export const isMoving = (activity: Activity | undefined): boolean =>
+  (activity ?? 'walk') === 'walk' || activity === 'jog'
+
+/**
+ * Whether a person can stand at a point: inside the map, clear of buildings, clear of
+ * tree trunks, and off the carriageway. One predicate, used both for people walking
+ * along a pavement and for people waiting at a stage, so nobody ends up standing in the
+ * middle of a road.
+ */
+export function pavementClear(
   index: ZoneIndex,
-  trees: Float32Array,
-  start: { x: number; z: number; yaw?: number },
-  limit = 300,
-): WalkingPath[] {
-  const trunks = new SpatialGrid<[number, number, number]>(20)
-  for (let i = 0; i < trees.length; i += TREE_STRIDE) {
-    const x = trees[i],
-      z = trees[i + 1],
-      r = trunkRadius(trees[i + 2]) + 0.5
-    trunks.insert([x, z, r], x - r, z - r, x + r, z + r)
-  }
-  const clear = (x: number, z: number) => {
+  trunks: SpatialGrid<[number, number, number]>,
+): (x: number, z: number) => boolean {
+  return (x, z) => {
     const b = index.bounds
     if (x < b.minX + 14 || x > b.maxX - 14 || z < b.minZ + 14 || z > b.maxZ - 14) return false
     for (const [dx, dz] of [
@@ -59,6 +92,48 @@ export function planPedestrians(
     })
     return !blocked
   }
+}
+
+/** The nearest point on a drivable road to `x`,`z`, or null if there isn't one close by. */
+export function nearestCarriageway(
+  index: ZoneIndex,
+  x: number,
+  z: number,
+  radius = 24,
+): { x: number; z: number } | null {
+  // `as` rather than a plain annotation: TypeScript narrows a `let` to null when the only
+  // assignment is inside a callback, and then calls the property access an error.
+  let best = null as { x: number; z: number; d: number } | null
+  index.roadsNear(x, z, radius, ({ ax, az, bx, bz, road }) => {
+    if (road.e || !DRIVABLE[road.k]) return
+    const dx = bx - ax,
+      dz = bz - az
+    const length2 = dx * dx + dz * dz
+    const t = length2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / length2)) : 0
+    const px = ax + dx * t,
+      pz = az + dz * t
+    const d = Math.hypot(px - x, pz - z)
+    if (!best || d < best.d) best = { x: px, z: pz, d }
+  })
+  return best ? { x: best.x, z: best.z } : null
+}
+
+/** Build a bounded crowd, distributed across the city, with clear paths near the start. */
+export function planPedestrians(
+  zone: ZoneFile,
+  index: ZoneIndex,
+  trees: Float32Array,
+  start: { x: number; z: number; yaw?: number },
+  limit = 300,
+): WalkingPath[] {
+  const trunks = new SpatialGrid<[number, number, number]>(20)
+  for (let i = 0; i < trees.length; i += TREE_STRIDE) {
+    const x = trees[i],
+      z = trees[i + 1],
+      r = trunkRadius(trees[i + 2]) + 0.5
+    trunks.insert([x, z, r], x - r, z - r, x + r, z + r)
+  }
+  const clear = pavementClear(index, trunks)
   const hotspots = crowdHotspots(zone)
   const nearHotspot = (x: number, z: number) =>
     hotspots.some((h) => Math.hypot(h.x - x, h.z - z) < 90)
@@ -86,13 +161,19 @@ export function planPedestrians(
           const offset = side * (road.w / 2 + pavement * 0.55)
           const x = ax + ux * middle - uz * offset,
             z = az + uz * middle + ux * offset
-          const path = {
+          // One in nine jogs. Fitness running on a Nairobi pavement is common enough that
+          // a crowd without it looks like a still photograph.
+          const activity: Activity = hash01(id, 61) < 0.11 ? 'jog' : 'walk'
+          const path: WalkingPath = {
+            activity,
             ax: x - ux * half,
             az: z - uz * half,
             bx: x + ux * half,
             bz: z + uz * half,
             length: 2 * half,
-            speed: 0.85 + hash01(id, 3) * 0.55,
+            // Joggers run at a runner's pace, not a fast walk; the speed also sets how far
+            // the limbs swing and how long the stride is, so it has to be honest.
+            speed: activity === 'jog' ? 2.6 + hash01(id, 3) * 0.9 : 0.85 + hash01(id, 3) * 0.55,
             phase: hash01(id, 4),
             seed: id,
             pause: 0.4 + hash01(id, 9) * 1.6,
@@ -180,10 +261,27 @@ export function crowdHotspots(zone: ZoneFile): { x: number; z: number }[] {
   return points
 }
 
-/** Walk back and forth with brief, seeded pauses at the ends of a pavement route. */
+/**
+ * Where a person is and what they are doing at `seconds`.
+ *
+ * Walkers and joggers pace along their route and turn at the ends. People waiting, queueing
+ * or sitting stay where they were put: `x`/`z` are constant and the *activity* is what
+ * changes over time, not the position. That is the whole difference between a pavement full
+ * of people and a pavement full of pendulums.
+ */
 export function pedestrianPose(path: WalkingPath, seconds: number) {
-  const travel = path.length / path.speed,
-    pause = path.pause ?? 0
+  const activity = path.activity ?? 'walk'
+
+  // Standing about: no travel at all. A waiting person faces the road they are waiting for.
+  if (activity === 'wait' || activity === 'queue' || activity === 'sit') {
+    const at = path.stand ?? { x: (path.ax + path.bx) / 2, z: (path.az + path.bz) / 2 }
+    const dx = path.bx - path.ax
+    const dz = path.bz - path.az
+    return { x: at.x, z: at.z, yaw: Math.atan2(-dx, -dz), walking: false }
+  }
+
+  const travel = path.length / path.speed
+  const pause = path.pause ?? 0
   const period = 2 * (travel + pause)
   const time = (((path.phase * period + seconds) % period) + period) % period
   const forward = time < travel + pause
@@ -204,4 +302,73 @@ export function pedestrianPose(path: WalkingPath, seconds: number) {
     yaw: Math.atan2(-dx, -dz) + (forward ? 0 : Math.PI),
     walking,
   }
+}
+
+/**
+ * People at the matatu stages: some standing, some sitting on the kerb, a loose queue.
+ *
+ * Stages are where a Nairobi pavement is busiest and where people are most obviously
+ * *doing nothing*: waiting is the activity, not walking in circles. Each stage gets a
+ * handful, placed on the pavement side of the road rather than in the carriageway.
+ */
+export function planStageWaiters(
+  zone: ZoneFile,
+  index: ZoneIndex,
+  trees: Float32Array,
+  limit = 90,
+): WalkingPath[] {
+  const trunks = new SpatialGrid<[number, number, number]>(20)
+  for (let i = 0; i < trees.length; i += TREE_STRIDE) {
+    const x = trees[i],
+      z = trees[i + 1],
+      r = trunkRadius(trees[i + 2]) + 0.5
+    trunks.insert([x, z, r], x - r, z - r, x + r, z + r)
+  }
+  const clear = pavementClear(index, trunks)
+  const out: WalkingPath[] = []
+  let seed = 500_000
+  for (const poi of zone.pois) {
+    if (poi.k !== 'stage') continue
+    const x = poi.x / zone.q
+    const z = poi.z / zone.q
+    // Six per stage: two sitting, the rest standing or queueing, spread along the kerb.
+    // A stage marker sits in the carriageway, so most points on a small ring around it are
+    // rejected; try enough of them to fill the pavement without standing anyone in a road.
+    let placed = 0
+    for (let n = 0; n < 16 && placed < 6 && out.length < limit; n++) {
+      const id = seed++
+      const angle = (n / 16) * Math.PI * 2 + hash01(id, 3) * 0.4
+      const radius = 1.4 + (n % 4) * 1.5 + hash01(id, 4) * 1.2
+      const px = x + Math.cos(angle) * radius
+      const pz = z + Math.sin(angle) * radius
+      if (!clear(px, pz)) continue
+      // Face the road *from where the person is standing*: a person waiting for a matatu
+      // looks at the carriageway, not at the pavement. Measuring from the stage marker
+      // instead puts people on a corner facing the wrong street; the first version did
+      // exactly that and one in three ended up with their back to the road.
+      const kerb = nearestCarriageway(index, px, pz)
+      if (!kerb) continue
+      const fx = kerb.x - px
+      const fz = kerb.z - pz
+      const length = Math.hypot(fx, fz) || 1
+      const ux = fx / length,
+        uz = fz / length
+      const roll = hash01(id, 5)
+      const activity: Activity = roll < 0.18 ? 'sit' : roll < 0.45 ? 'queue' : 'wait'
+      out.push({
+        activity,
+        ax: px - ux * 0.5,
+        az: pz - uz * 0.5,
+        bx: px + ux * 0.5,
+        bz: pz + uz * 0.5,
+        length: 1,
+        speed: 0,
+        phase: hash01(id, 7),
+        seed: id,
+        stand: { x: px, z: pz },
+      })
+      placed++
+    }
+  }
+  return out
 }

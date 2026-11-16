@@ -39,8 +39,12 @@ import {
   PROPORTIONS,
   STANDARD_HEIGHT,
   idlePose,
+  jogPose,
   partSize,
+  queuePose,
+  sittingPose,
   strideLength,
+  waitPose,
   walkPose,
   type Body,
   type PartName,
@@ -48,7 +52,7 @@ import {
 } from './body'
 import { allPartGeometry, type PartMesh } from './figures'
 import { makeBody, tintOf } from './appearance'
-import { pedestrianPose, planPedestrians } from './paths'
+import { pedestrianPose, planPedestrians, planStageWaiters } from './paths'
 
 const RANGES = { high: 180, medium: 140, low: 100 }
 
@@ -72,8 +76,12 @@ function toGeometry(mesh: PartMesh): BufferGeometry {
  */
 interface Joint {
   at: [number, number, number]
+  /** Rotation about x: a forward swing for limbs, a forward lean for the torso. */
   turn?: number
+  /** Rotation about z: a splay out to the side. */
   tilt?: number
+  /** Rotation about y: the shoulders turning against the hips. */
+  spin?: number
   part?: PartName
   mesh?: number
   children?: Joint[]
@@ -149,7 +157,10 @@ function skeleton(body: Body, gait: WalkPose, s: number): Joint[] {
     // The hips: a pivot, and the torso that hangs from it.
     {
       at: [0, torsoY, 0],
-      turn: gait.twist,
+      // Forward lean, about x. This is what makes a jogger read as a runner rather than
+      // as someone walking very fast with their arms out.
+      turn: gait.lean,
+      spin: gait.twist,
       part: 'torso',
       mesh: MESH.torso,
       children: [
@@ -212,6 +223,7 @@ const QUATERNION = new Quaternion()
 const AT = new Matrix4()
 const TURN = new Matrix4()
 const TILT = new Matrix4()
+const SPIN = new Matrix4()
 const SCALED = new Matrix4()
 const POSITION = new Vector3()
 const COLOUR = new Color()
@@ -249,7 +261,10 @@ export function Pedestrians({
   const quality = useQuality()
   const paths = useMemo(
     () =>
-      planPedestrians(zone.file, zone.index, zone.geometry.trees, start).filter(
+      [
+        ...planPedestrians(zone.file, zone.index, zone.geometry.trees, start),
+        ...planStageWaiters(zone.file, zone.index, zone.geometry.trees, 90),
+      ].filter(
         (p) =>
           !exclusion ||
           Math.hypot((p.ax + p.bx) / 2 - exclusion.x, (p.az + p.bz) / 2 - exclusion.z) > 14,
@@ -314,9 +329,19 @@ export function Pedestrians({
 
       const step = Math.min(delta, 0.05)
       tread.current[i] += path.speed * step
-      const gait = pose.walking
-        ? walkPose(tread.current[i] / strideLength(path.speed), path.speed)
-        : idlePose(elapsed.current + path.seed * 3.1, body.stance)
+      const clock = elapsed.current + path.seed * 3.1
+      const gait =
+        path.activity === 'jog'
+          ? jogPose((tread.current[i] / strideLength(path.speed)) * 1.35, path.speed)
+          : path.activity === 'wait'
+            ? waitPose(clock, body.stance)
+            : path.activity === 'queue'
+              ? queuePose(clock, body.stance)
+              : path.activity === 'sit'
+                ? sittingPose()
+                : pose.walking
+                  ? walkPose(tread.current[i] / strideLength(path.speed), path.speed)
+                  : idlePose(clock, body.stance)
 
       // The root: the person, on the ground, facing along their path.
       scratch.compose(
@@ -377,6 +402,8 @@ function poseJoints(
   for (const joint of joints) {
     const local = nextMatrix().multiplyMatrices(parent, AT.makeTranslation(...joint.at))
     local.multiply(TURN.makeRotationX(joint.turn ?? 0))
+    // Twist about the vertical, which is how the shoulders turn against the hips.
+    if (joint.spin) local.multiply(SPIN.makeRotationY(joint.spin))
     if (joint.tilt) local.multiply(TILT.makeRotationZ(joint.tilt))
 
     if (joint.part && joint.mesh !== undefined) {

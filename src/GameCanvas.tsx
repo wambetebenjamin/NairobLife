@@ -37,6 +37,7 @@ import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
 import { GamepadPump } from './input/gamepadPump'
 import { CitySound } from './game/CitySound'
+import { Lifts } from './world/lifts/Lifts'
 import { Pedestrians } from './world/pedestrians/Pedestrians'
 import { Billboards } from './world/furniture/Billboards'
 import { StreetFurniture } from './world/furniture/StreetFurniture'
@@ -108,6 +109,7 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           <Billboards zone={zone} start={start} />
           <StreetFurniture zone={zone} />
           <Pedestrians zone={zone} start={start} exclusion={campaign} />
+          <Lifts zone={zone} />
           <Vehicles placements={placements} />
           {campaign && <Campaign site={campaign} />}
           <Traffic zone={zone} start={start} />

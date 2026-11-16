@@ -24,6 +24,7 @@ import {
 } from '../game/actions'
 import { useGame, type VehicleTag } from '../state/gameStore'
 import { runtime } from '../state/runtime'
+import { LIFT_REACH } from '../world/lifts/lifts'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { formatClock, sunAngle } from '../world/environment/skyModel'
 import { ControlsCard } from './ControlsCard'
@@ -56,6 +57,12 @@ interface Sample {
   position: string
   altitude: number
   fps: number
+  /** The nearest usable lift, or null. */
+  lift: typeof runtime.liftNear | null
+  /** Index of the lift being ridden, or -1. */
+  riding: number
+  /** The floor the rider has asked for, if any. */
+  liftWants: number | null
 }
 
 export function Hud() {
@@ -90,6 +97,9 @@ export function Hud() {
         position: formatLatLon(projection.toLatLon(p.x, p.z), 4),
         altitude: Math.round(BASE_ELEVATION_M + p.y),
         fps: Math.round(runtime.fps),
+        lift: runtime.liftNear && !runtime.ride ? { ...runtime.liftNear } : null,
+        riding: runtime.lift ? runtime.lift.id : -1,
+        liftWants: runtime.lift?.wants ?? null,
       })
     }
     read()
@@ -162,8 +172,39 @@ export function Hud() {
         <Minimap map={map} size={touch ? 124 : 176} />
       </div>
 
+      {/* A lift: board it, or — inside it — say which way you are going. */}
+      {!touch &&
+        !ride &&
+        sample.lift &&
+        (sample.riding >= 0 || sample.lift.distance <= LIFT_REACH) && (
+          <div className="hud__prompt">
+            <kbd>E</kbd>
+            {sample.riding >= 0 ? (
+              <>
+                <span>Ride lift</span>
+                <span className="hud__prompt-detail">
+                  Floor {sample.lift.floor}
+                  {sample.lift.floors > 1 ? ` of ${sample.lift.floors}` : ''}
+                  {sample.liftWants !== null && sample.liftWants !== sample.lift.floor
+                    ? ` → ${sample.liftWants}`
+                    : ''}
+                </span>
+                <kbd className="hud__prompt-soft">PgUp/PgDn</kbd>
+              </>
+            ) : (
+              <>
+                <span>Call lift</span>
+                <span className="hud__prompt-detail">
+                  Floor {sample.lift.floor}
+                  {sample.lift.floors > 1 ? ` of ${sample.lift.floors}` : ''}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
       {/* On touch screens the same offer is a button under the thumb (TouchControls). */}
-      {nearVehicle && !driving && !ride && !touch && (
+      {nearVehicle && !driving && !ride && !touch && !sample.lift && (
         <div className="hud__prompt">
           <kbd>F</kbd>
           <span>{t(nearVehicle.kind === 'boda' ? 'ride' : 'drive')}</span>

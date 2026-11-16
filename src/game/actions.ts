@@ -202,6 +202,16 @@ export function enterOrExitVehicle(): void {
   if (game().phase === 'playing' && !runtime.ride) runtime.enterExit = true
 }
 
+/**
+ * The floor buttons: PageUp and PageDown, and the equivalent on a keypad.
+ *
+ * Held rather than tapped, because a rider leaning on the button should climb until they
+ * let go. A direction is passed on and the lift system turns it into a floor.
+ */
+export function liftFloor(direction: -1 | 1): void {
+  if (game().phase === 'playing' && runtime.lift) runtime.liftGo = direction
+}
+
 export function toggleFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen()
   else void document.documentElement.requestFullscreen?.().catch(() => {})
@@ -236,6 +246,11 @@ function onTap(action: TapAction): void {
       return toggleFullscreen()
     case 'enterVehicle':
       return enterOrExitVehicle()
+    case 'useLift':
+      // The lift system reads and clears this flag inside its own frame, because it needs
+      // the player's position and the car's, which only it has.
+      runtime.liftButton = true
+      return
     case 'reconPulse':
       // TODO(gameplay): reserved for a scan/ping ability in later modes.
       return

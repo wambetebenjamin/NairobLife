@@ -79,6 +79,49 @@ export const runtime = {
   /** F was pressed: get into the nearest vehicle, or out of this one. Consumed by the fleet. */
   enterExit: false,
 
+  /**
+   * E was pressed: call, enter or leave a lift. Consumed by the lift system.
+   */
+  liftButton: false,
+
+  /**
+   * PageUp/PageDown while riding: the floor the rider wants, or 0 for none.
+   *
+   * Written by `game/actions.ts` from the held keys, read and cleared by the lift system.
+   * A direction rather than a floor because the rider only ever says "up" or "down".
+   */
+  liftGo: 0 as -1 | 0 | 1,
+
+  /**
+   * The lift the player is riding, or null on foot.
+   *
+   * The car's own state lives in `world/lifts/lifts.ts`; this only says which car and where
+   * the player is in it. `y` is the queued destination floor, set by clicking a button.
+   */
+  lift: null as null | {
+    /** Index into the zone's planned lifts, stable for a zone. */
+    id: number
+    /** Queued destination, or null while the car is idle between calls. */
+    wants: number | null
+  },
+
+  /**
+   * The nearest lift the player could use, refreshed by the lift system a few times a
+   * second so the HUD can prompt without every frame doing a spatial query.
+   */
+  liftNear: null as null | {
+    id: number
+    x: number
+    z: number
+    /** World height of the car right now. */
+    y: number
+    /** Distance from the player to the car's doorway, in metres. */
+    distance: number
+    floor: number
+    floors: number
+    phase: string
+  },
+
   /** Elapsed simulation seconds for traffic signal cycles; pauses with the game. */
   trafficTime: 0,
 

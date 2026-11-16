@@ -1328,3 +1328,16 @@ kbd {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* A second, quieter key alongside a prompt's primary one: the floor buttons in a lift. */
+.hud__prompt-soft {
+  min-width: auto;
+  background: #2a3038 !important;
+  color: var(--muted) !important;
+  font-weight: 500;
+}
+.hud__prompt-detail {
+  color: var(--muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}

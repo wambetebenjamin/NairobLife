@@ -289,6 +289,15 @@ export interface WalkPose {
   bob: number
   /** How much the shoulders have twisted against the hips, radians. */
   twist: number
+  /**
+   * Forward lean of the whole torso, radians.
+   *
+   * A runner leans into the run, a standing person does not, and someone whose matatu has
+   * just been cancelled leans on a post. Until now the torso only ever rotated about y
+   * (`twist`), which no amount of walking speed could turn into a lean, so the jogger was
+   * a walker with a longer stride.
+   */
+  lean: number
 }
 
 const TAU = Math.PI * 2
@@ -328,6 +337,95 @@ export function walkPose(phase: number, speed = 1.2): WalkPose {
     // Two rises per stride, over each planted leg.
     bob: (pulse((((p * 2) % 1) + 1) % 1) - 0.5) * 0.035 * (0.6 + speed * 0.3),
     twist: left * 0.12,
+    // Lean grows with speed but saturates: a 3 m/s jog is not a sprint start.
+    lean: Math.min(0.22, speed * 0.045),
+  }
+}
+
+/**
+ * The pose of someone jogging at `phase`: the walk, exaggerated and tipped forward.
+ *
+ * A jog is not a fast walk. The difference that reads from across the street is that the
+ * runner leaves the ground: both feet are off it together twice a stride, the arms are
+ * bent at 90 degrees and driven, and the torso leans. So this is a separate pose rather
+ * than `walkPose` with a number turned up.
+ */
+export function jogPose(phase: number, speed = 2.9): WalkPose {
+  const p = ((phase % 1) + 1) % 1
+  const swing = Math.min(0.95, 0.5 + speed * 0.14)
+  const left = Math.sin(p * TAU)
+  const right = Math.sin(p * TAU + Math.PI)
+  const kneeOf = (t: number) => {
+    const s = Math.sin(t * TAU)
+    // The trailing leg folds hard: a runner's heel comes up to the buttock.
+    return Math.max(0, s) * 1.55 + Math.max(0, -s) * 0.5
+  }
+  return {
+    thighL: left * swing,
+    thighR: right * swing,
+    kneeL: kneeOf(p + 0.25),
+    kneeR: kneeOf(p + 0.75),
+    armL: -left * swing * 0.95,
+    armR: -right * swing * 0.95,
+    // Both arms held bent, and driven rather than hanging.
+    elbowL: 1.25 + Math.max(0, -left) * 0.35,
+    elbowR: 1.25 + Math.max(0, -right) * 0.35,
+    // Flight: the body is highest over the planted leg and lowest between strides, and
+    // the whole body rises higher than in a walk.
+    bob: (pulse((((p * 2) % 1) + 1) % 1) - 0.4) * 0.075,
+    twist: left * 0.2,
+    lean: 0.16 + Math.min(0.1, speed * 0.02),
+  }
+}
+
+/**
+ * Someone waiting at a stage: weight on one hip, one arm across the body, shifting now
+ * and then. `seconds` drives the shift so a row of waiting people does not move together.
+ */
+export function waitPose(seconds: number, stance: number): WalkPose {
+  // A slow weight shift: about one shift every four seconds, offset by the person.
+  const shift = Math.sin(seconds * 1.6) * 0.5 + 0.5
+  // At most a hand's width of sway at the hip, which is what standing on one leg looks like.
+  const leanSide = (shift - 0.5) * 0.3
+  return {
+    // The loaded hip takes the weight, so that leg straightens and the other bends. The
+    // shift is added to one thigh and subtracted from the other: added to both, it cancels
+    // out of the difference between the legs and the pose is a statue.
+    thighL: stance + leanSide,
+    thighR: -stance - leanSide,
+    kneeL: 0.1 + shift * 0.12,
+    kneeR: 0.02 + (1 - shift) * 0.12,
+    // One arm down, one folded across the chest -- the posture of a long wait.
+    armL: 0.1 + Math.sin(seconds * 0.9) * 0.03,
+    armR: 0.42,
+    elbowL: 0.2,
+    elbowR: 1.05 + Math.sin(seconds * 1.1 + 1.7) * 0.08,
+    bob: -0.004 - Math.abs(leanSide) * 0.02,
+    twist: Math.sin(seconds * 0.57) * 0.08,
+    lean: Math.sin(seconds * 0.43) * 0.03,
+  }
+}
+
+/**
+ * A loose queue: people stand closer together and face the same way, and the front of the
+ * queue looks at the road. The difference from `waitPose` is the attention -- head and
+ * shoulders turned to the front rather than idly shifting.
+ */
+export function queuePose(seconds: number, stance: number): WalkPose {
+  const shuffle = Math.max(0, Math.sin(seconds * 0.8)) * 0.04
+  return {
+    thighL: stance * 0.6,
+    thighR: -stance * 0.6,
+    kneeL: 0.08 + shuffle,
+    kneeR: 0.05,
+    armL: 0.08,
+    // Hands clasped in front, or a phone: both arms forward and low.
+    armR: 0.16,
+    elbowL: 0.55,
+    elbowR: 0.62,
+    bob: Math.sin(seconds * 1.4) * 0.003,
+    twist: 0.06 + Math.sin(seconds * 0.5) * 0.04,
+    lean: 0.02,
   }
 }
 
@@ -345,6 +443,7 @@ export function idlePose(seconds: number, stance: number): WalkPose {
     elbowR: 0.18,
     bob: Math.sin(seconds * 1.3) * 0.004,
     twist: sway * 2,
+    lean: 0,
   }
 }
 
@@ -361,6 +460,7 @@ export function sittingPose(): WalkPose {
     elbowR: 0.5,
     bob: -0.42,
     twist: 0,
+    lean: 0,
   }
 }
 

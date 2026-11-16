@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { loadBakedZone } from '../../testing/zoneFixture'
 import { ZoneIndex } from '../zone/zoneIndex'
+import { distToSegmentSq } from '../../core/geom2d'
+import { DRIVABLE } from '../zone/format'
 import { scatterTrees } from '../geometry/trees'
-import { crowdHotspots, pedestrianPose, planPedestrians } from './paths'
+import { crowdHotspots, isMoving, pedestrianPose, planPedestrians, planStageWaiters } from './paths'
 
 describe('ambient pedestrians', () => {
   const zone = loadBakedZone()
@@ -54,5 +56,57 @@ describe('ambient pedestrians', () => {
     expect(pedestrianPose(p, 11)).toMatchObject({ x: 10, walking: false })
     expect(pedestrianPose(p, 13)).toMatchObject({ x: 9, walking: true })
     expect(pedestrianPose(p, 23)).toMatchObject({ x: 0, walking: false })
+  })
+})
+
+describe('the crowd is doing things, not just walking', () => {
+  const zone = loadBakedZone()
+  const index = new ZoneIndex(zone)
+  const trees = scatterTrees(zone)
+  const start = { x: -120.2, z: -109.5, yaw: -2.313 }
+  const walkers = planPedestrians(zone, index, trees, start)
+  const waiters = planStageWaiters(zone, index, trees, 90)
+
+  it('has joggers among the walkers, at a runner’s pace', () => {
+    const joggers = walkers.filter((p) => p.activity === 'jog')
+    expect(joggers.length).toBeGreaterThan(10)
+    for (const jogger of joggers) expect(jogger.speed).toBeGreaterThan(2.4)
+    // The walking majority is untouched.
+    expect(walkers.filter((p) => (p.activity ?? 'walk') === 'walk').length).toBeGreaterThan(200)
+  })
+
+  it('puts people at the mapped stages: standing, queueing and sitting', () => {
+    expect(waiters.length).toBeGreaterThan(60)
+    const kinds = new Set(waiters.map((p) => p.activity))
+    expect(kinds).toContain('wait')
+    expect(kinds).toContain('queue')
+    expect(kinds).toContain('sit')
+    for (const person of waiters) expect(isMoving(person.activity)).toBe(false)
+  })
+
+  it('does not leave anyone standing in the carriageway', () => {
+    for (const person of waiters) {
+      let onRoad = false
+      index.roadsNear(person.stand!.x, person.stand!.z, 2, ({ ax, az, bx, bz, road }) => {
+        if (road.e || !DRIVABLE[road.k]) return
+        // The same standard the placement uses: a person may stand at the kerb, not in the
+        // traffic, with a 0.3 m allowance for the kerb itself.
+        if (
+          distToSegmentSq(person.stand!.x, person.stand!.z, ax, az, bx, bz) <
+          Math.max(0, road.w / 2 - 0.3) ** 2
+        )
+          onRoad = true
+      })
+      expect(onRoad, `${person.seed} stands on a road`).toBe(false)
+    }
+  })
+
+  it('keeps a waiting person where they were put, and turns them to the road', () => {
+    const person = waiters[0]
+    const a = pedestrianPose(person, 0)
+    const b = pedestrianPose(person, 60)
+    expect(a).toMatchObject({ x: b.x, z: b.z, walking: false })
+    // Facing is not arbitrary: the road they are waiting for is in front of them.
+    expect(Number.isFinite(a.yaw)).toBe(true)
   })
 })

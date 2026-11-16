@@ -11,11 +11,14 @@ import {
   STANDARD_HEIGHT,
   ankleForward,
   idlePose,
+  jogPose,
   legChain,
+  queuePose,
   partSize,
   phaseFor,
   sittingPose,
   strideLength,
+  waitPose,
   walkPose,
 } from './body'
 import { allPartGeometry, partGeometry } from './figures'
@@ -475,5 +478,54 @@ describe('the joints, as the renderer poses them', () => {
     // A 1.72 m adult's step reaches roughly half a stride in front of the hip.
     expect(furthest).toBeGreaterThan(0.25)
     expect(furthest).toBeLessThan(0.6)
+  })
+})
+
+describe('the activities on a Nairobi pavement', () => {
+  it('runs rather than walks quickly: longer stride, bent arms, a forward lean', () => {
+    const walk = walkPose(0.25, 1.2)
+    const jog = jogPose(0.25, 3)
+    // The stride is bigger and the arms are driven, not hanging.
+    expect(Math.abs(jog.thighL)).toBeGreaterThan(Math.abs(walk.thighL))
+    expect(jog.elbowL).toBeGreaterThan(walk.elbowL + 0.5)
+    // A forward lean is the whole difference at a distance.
+    expect(jog.lean).toBeGreaterThanOrEqual(0.16)
+    expect(walk.lean).toBeLessThan(0.1)
+    // The trailing heel comes up towards the buttock: a runner folds the knee hard.
+    const folds: number[] = []
+    for (let i = 0; i < 32; i++)
+      folds.push(Math.max(jogPose(i / 32, 3).kneeL, jogPose(i / 32, 3).kneeR))
+    expect(Math.max(...folds)).toBeGreaterThan(1.2)
+  })
+
+  it('keeps the knees bending the right way in a run as well as a walk', () => {
+    for (let i = 0; i < 32; i++) {
+      const pose = jogPose(i / 32, 3)
+      expect(pose.kneeL).toBeGreaterThanOrEqual(0)
+      expect(pose.kneeR).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('stands with the weight on one hip, and shifts it over a few seconds', () => {
+    const poses = Array.from({ length: 40 }, (_, i) => waitPose(i * 0.2, 0.06))
+    // Not a statue: the hips move.
+    const lean = poses.map((p) => p.thighL - p.thighR)
+    expect(Math.max(...lean) - Math.min(...lean)).toBeGreaterThan(0.05)
+    // Not a jog: nearly no forward lean, and no bounce.
+    for (const p of poses) {
+      expect(Math.abs(p.lean)).toBeLessThan(0.05)
+      expect(Math.abs(p.bob)).toBeLessThan(0.01)
+    }
+    // One arm folded across the body, the posture of a long wait.
+    expect(poses[0].elbowR).toBeGreaterThan(0.9)
+  })
+
+  it('queues with both arms low and in front, facing the same way', () => {
+    const pose = queuePose(0, 0.06)
+    expect(pose.elbowL).toBeGreaterThan(0.4)
+    expect(pose.elbowR).toBeGreaterThan(0.4)
+    expect(Math.abs(pose.lean)).toBeLessThan(0.05)
+    // Standing still, feet close together rather than planted wide.
+    expect(Math.abs(pose.thighL)).toBeLessThan(0.06)
   })
 })

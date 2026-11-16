@@ -83,6 +83,10 @@ export const input = {
     return { steer: Math.max(-1, Math.min(1, x)), throttle: Math.max(-1, Math.min(1, y)) }
   },
 
+  /** -1, 0 or 1: a floor button is being held. Only a lift rider uses this. */
+  liftFloor: () =>
+    (enabled && held.has('liftUp') ? 1 : 0) - (enabled && held.has('liftDown') ? 1 : 0),
+
   sprint: () => enabled && (held.has('sprint') || touch.sprint || pad.sprint),
   crouch: () => enabled && (held.has('crouch') || touch.crouch || pad.crouch),
   jumpHeld: () => enabled && (held.has('jump') || touch.jump || pad.jump),
