@@ -80,3 +80,46 @@ describe('height estimates', () => {
     expect(estimate({ id: 5, type: 'cathedral', area: 400, x: 0, z: 0 })).toBe(22)
   })
 })
+
+describe('prediction from neighbours', () => {
+  // These pin the model's *shape*, not exact metres: the measured accuracy on the 251 real
+  // CBD buildings is recorded in heights.ts and in docs/notes/height-model.md. What must not
+  // change silently is that neighbours win over distance, and that a tower beside a tower is
+  // not flattened by the slenderness cap into something a plateau can wear.
+
+  it('follows the nearest tagged heights, not distant ones', () => {
+    // A tall cluster to the east, a low row to the west. A building in the tall cluster must
+    // come out tall even though it is well inside the 200 m search radius of both.
+    const known = [
+      { x: 0, z: 0, levels: 30 },
+      { x: 20, z: 0, levels: 30 },
+      { x: 40, z: 0, levels: 30 },
+      { x: 300, z: 0, levels: 3 },
+      { x: 320, z: 0, levels: 3 },
+      { x: 340, z: 0, levels: 3 },
+    ]
+    const estimate = createHeightEstimator(known)
+    const nearTall = estimate({ id: 1, type: undefined, area: 700, x: 30, z: 10 })
+    const nearLow = estimate({ id: 2, type: undefined, area: 700, x: 320, z: 10 })
+    expect(nearTall).toBeGreaterThan(nearLow * 2)
+  })
+
+  it('gives a plausible height where there is no tagged building at all', () => {
+    // The far corner of a zone. It must still return a sane low-rise building rather than
+    // zero, NaN, or something the player can walk through the roof of.
+    const estimate = createHeightEstimator([{ x: 0, z: 0, levels: 20 }])
+    const far = estimate({ id: 3, type: undefined, area: 300, x: 40_000, z: 40_000 })
+    expect(Number.isFinite(far)).toBe(true)
+    expect(far).toBeGreaterThan(3)
+    expect(far).toBeLessThan(40)
+  })
+
+  it('does not turn a kiosk-sized outline beside a tower into a tower', () => {
+    // The slenderness cap still applies: a 4 m by 4 m shed cannot be 90 m tall just because
+    // it stands at the foot of one that is.
+    const tall = Array.from({ length: 12 }, (_, i) => ({ x: i * 5, z: 0, levels: 30 }))
+    const estimate = createHeightEstimator(tall)
+    const shed = estimate({ id: 9, type: undefined, area: 16, x: 30, z: 6 })
+    expect(shed).toBeLessThan(20)
+  })
+})

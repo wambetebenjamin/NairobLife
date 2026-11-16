@@ -201,13 +201,14 @@ is a roadmap item; the shared projection origin means they will already line up.
 
 ## Changing how the map looks
 
-| To change                               | Edit                                                  | Re-bake? |
-| --------------------------------------- | ----------------------------------------------------- | -------- |
-| Wall, roof, road and park colours       | `src/world/geometry/palette.ts`                       | No       |
-| Windows, shop fronts, night lighting    | `src/world/materials/buildingMaterial.ts`             | No       |
-| Which buildings get which facade style  | `styleFor` in `src/world/geometry/buildings.ts`       | No       |
-| Kerb lines, lane lines, zebra stripes   | `src/world/geometry/ground.ts`                        | No       |
-| Where vehicles are parked, and how many | `src/vehicles/placement.ts`, `src/config/vehicles.ts` | No       |
-| Road widths, what counts as a park      | `scripts/osm/lib/tags.ts`                             | Yes      |
-| Height estimates                        | `scripts/osm/lib/heights.ts`                          | Yes      |
-| Tree density                            | `src/world/geometry/trees.ts`                         | No       |
+| To change                                                 | Edit                                                  | Re-bake? |
+| --------------------------------------------------------- | ----------------------------------------------------- | -------- |
+| Wall, roof, road and park colours                         | `src/world/geometry/palette.ts`                       | No       |
+| Windows, shop fronts, night lighting                      | `src/world/materials/buildingMaterial.ts`             | No       |
+| Which buildings get which facade style                    | `styleFor` in `src/world/geometry/buildings.ts`       | No       |
+| Kerb lines, lane lines, zebra stripes                     | `src/world/geometry/ground.ts`                        | No       |
+| Where vehicles are parked, and how many                   | `src/vehicles/placement.ts`, `src/config/vehicles.ts` | No       |
+| Road widths, what counts as a park                        | `scripts/osm/lib/tags.ts`                             | Yes      |
+| Height estimates                                          | `scripts/osm/lib/heights.ts`                          | Yes      |
+| How heights are estimated, and the measurements behind it | [notes/height-model.md](notes/height-model.md)        | —        |
+| Tree density                                              | `src/world/geometry/trees.ts`                         | No       |
