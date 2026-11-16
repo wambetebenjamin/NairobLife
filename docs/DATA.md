@@ -157,6 +157,18 @@ real OSM height).
 | Lost in export | The `facade` vertex attribute and the window shader that reads it (`src/world/materials/buildingMaterial.ts`). Windows are drawn procedurally in the game only.            |
 | Heuristic      | Heights marked `est` in the zone file were estimated in the bake. The exporter prints how many are measured and how many are not, because the file itself cannot tell you. |
 
+To check an export without opening Blender, draw a flat plan of it. This is not a
+renderer: it reads the `.glb`, rasterises every triangle from above and shades it by
+height, which is enough to tell whether the city is upright, correctly shaped and in the
+right place.
+
+```sh
+python3 scripts/glb-preview.py dist/export/nairobi-cbd.glb docs/notes/img/city-export.png
+```
+
+`docs/notes/img/city-export.png` is the result for the current CBD: Uhuru Park and Central
+Park in green, the street grid, the railway lands to the south.
+
 Two things worth knowing before anyone starts building on top of a `.glb`:
 
 - It is a **snapshot**. Re-run `osm:export` after a re-bake; it is not part of the site build.
