@@ -12,6 +12,11 @@ metres, Y-up, X east and Z south — no axis fixing, no scaling. Colours arrive 
 `COLOR_0` attribute, so set the viewport shading to _Material Preview_ or plug the
 attribute into Principled BSDF to see the city painted.
 
+The file also carries its own provenance: `asset.copyright` holds the ODbL credit, and the
+root node's `extras` hold the WGS84 origin, the elevation and a note that some heights are
+estimates. That matters once a `.glb` is copied out of the repository — Blender's _Item >
+Custom Properties_ will show it.
+
 ## The Blender MCP
 
 [mcp-for-blender](https://github.com/ahujasid/mcp-for-blender) lets a _language model

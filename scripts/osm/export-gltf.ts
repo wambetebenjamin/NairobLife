@@ -23,6 +23,7 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
+import { BASE_ELEVATION_M } from '../../src/config/zones'
 import { createProjection } from '../../src/core/geo'
 import { buildBuildingMesh } from '../../src/world/geometry/buildings'
 import { buildGroundMesh, type FlatMesh } from '../../src/world/geometry/ground'
@@ -160,6 +161,16 @@ async function main(): Promise<void> {
 
   const root = new THREE.Group()
   root.name = options.zone
+  // A .glb that leaves the repository is a copy of an ODbL database, so it has to carry
+  // its own credit and the georeference that makes it useful outside the game. Put them
+  // in the file rather than in the commit message, which nobody opening it in Blender
+  // will ever see.
+  root.userData = {
+    source: 'OpenStreetMap contributors',
+    licence: 'ODbL 1.0 — https://www.openstreetmap.org/copyright',
+    origin: { ...file.origin, elevation: BASE_ELEVATION_M },
+    note: 'x=0, z=0 is origin; X is east, Z is south, metres. Heights marked est in the zone file are estimates, not surveys.',
+  }
   const material = cityMaterial()
 
   const built = options.buildings ? addBuildings(root, file, material) : 0
@@ -171,6 +182,9 @@ async function main(): Promise<void> {
     binary: true,
     // Vertex colours must reach COLOR_0 or every surface arrives white in Blender.
     includeCustomExtensions: false,
+    // ODbL requires attribution, and a .glb is a copy of the database. The zone already
+    // carries the exact wording, so use it rather than composing a near-duplicate.
+    copyright: `${file.attribution}. https://www.openstreetmap.org/copyright`,
   })
   if (!(result instanceof ArrayBuffer)) throw new Error('Expected binary glTF output')
 

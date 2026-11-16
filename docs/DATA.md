@@ -148,14 +148,15 @@ Current output for `nairobi-cbd`: **3,072 buildings, 2,330 trees, 769,937 triang
 34 MB**, and about **2.4 km × 2.3 km** across, standing 140 m at its tallest (Times Tower's
 real OSM height).
 
-| Thing          | Detail                                                                                                                                                                     |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Coordinates    | glTF is Y-up and so is the game, so no axis swap. **X is east, Z is south**, metres.                                                                                       |
-| Origin         | x=0, z=0 is the zone's `origin`. The export prints the latitude/longitude and the metres per degree of longitude, to get back to WGS84.                                    |
-| Colour         | Baked into `COLOR_0`; every primitive carries it. Materials are neutral `MeshStandardMaterial`, so a lighting rig behaves.                                                 |
-| Grouping       | One node per 400 m block, named `buildings_<n>_<cx>_<cz>`, plus `ground`, `raised` and `trees_<cx>_<cz>`. Handy for culling or for selecting a district.                   |
-| Lost in export | The `facade` vertex attribute and the window shader that reads it (`src/world/materials/buildingMaterial.ts`). Windows are drawn procedurally in the game only.            |
-| Heuristic      | Heights marked `est` in the zone file were estimated in the bake. The exporter prints how many are measured and how many are not, because the file itself cannot tell you. |
+| Thing          | Detail                                                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coordinates    | glTF is Y-up and so is the game, so no axis swap. **X is east, Z is south**, metres.                                                                                                           |
+| Origin         | x=0, z=0 is the zone's `origin`. The export prints the latitude/longitude and the metres per degree of longitude, to get back to WGS84.                                                        |
+| Colour         | Baked into `COLOR_0`; every primitive carries it. Materials are neutral `MeshStandardMaterial`, so a lighting rig behaves.                                                                     |
+| Grouping       | One node per 400 m block, named `buildings_<n>_<cx>_<cz>`, plus `ground`, `raised` and `trees_<cx>_<cz>`. Handy for culling or for selecting a district.                                       |
+| Lost in export | The `facade` vertex attribute and the window shader that reads it (`src/world/materials/buildingMaterial.ts`). Windows are drawn procedurally in the game only.                                |
+| Licence        | `asset.copyright` and the root node's `extras` carry the ODbL credit, the WGS84 origin and the elevation, so the file still says where it came from and where it is once it has left the repo. |
+| Heuristic      | Heights marked `est` in the zone file were estimated in the bake. The exporter prints how many are measured and how many are not, because the file itself cannot tell you.                     |
 
 To check an export without opening Blender, draw a flat plan of it. This is not a
 renderer: it reads the `.glb`, rasterises every triangle from above and shades it by
