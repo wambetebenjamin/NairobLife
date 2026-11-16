@@ -6,6 +6,11 @@ the content is Nairobi's own.
 
 Phase 3 is in progress. Later phases are plans, not promises.
 
+Two companion documents: [BLOCKERS.md](BLOCKERS.md) says, item by item, what actually
+stands in the way of each open checkbox — most are not blocked by code. And
+[UE5-SCOPING.md](UE5-SCOPING.md) scopes a possible Unreal Engine build against measured
+numbers from this repository.
+
 ## Phase 1: the city on foot (done)
 
 - [x] Map pipeline: OpenStreetMap to a compact zone file, with tests

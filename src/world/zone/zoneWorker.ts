@@ -9,8 +9,9 @@ import { buildBuildingMesh } from '../geometry/buildings'
 import { buildGroundMesh } from '../geometry/ground'
 import { buildRaisedRoads } from '../geometry/raisedRoads'
 import { buildTreeChunks, scatterTrees } from '../geometry/trees'
-import { ZONE_FORMAT_VERSION, type ZoneBuilding, type ZoneFile } from './format'
-import { CHUNK_SIZE, type BuildingChunk, type LoadRequest, type WorkerMessage } from './protocol'
+import { ZONE_FORMAT_VERSION, type ZoneFile } from './format'
+import { groupBuildingsByChunk } from './chunks'
+import type { BuildingChunk, LoadRequest, WorkerMessage } from './protocol'
 
 function post(message: WorkerMessage, transfer: Transferable[] = []): void {
   self.postMessage(message, { transfer })
@@ -40,23 +41,6 @@ async function download(url: string, onProgress: (fraction: number) => void): Pr
   return text + decoder.decode()
 }
 
-function chunkBuildings(
-  file: ZoneFile,
-): Map<string, { cx: number; cz: number; list: ZoneBuilding[] }> {
-  const chunks = new Map<string, { cx: number; cz: number; list: ZoneBuilding[] }>()
-  const size = CHUNK_SIZE * file.q
-  for (const building of file.buildings) {
-    // A building belongs to the chunk its first corner is in. Near enough, and stable.
-    const cx = Math.floor(building.p[0] / size)
-    const cz = Math.floor(building.p[1] / size)
-    const key = `${cx},${cz}`
-    const chunk = chunks.get(key)
-    if (chunk) chunk.list.push(building)
-    else chunks.set(key, { cx, cz, list: [building] })
-  }
-  return chunks
-}
-
 async function load(url: string): Promise<void> {
   const text = await download(url, (value) => post({ type: 'progress', stage: 'download', value }))
   const file = JSON.parse(text) as ZoneFile
@@ -70,7 +54,7 @@ async function load(url: string): Promise<void> {
   const started = performance.now()
   const transfer: Transferable[] = []
 
-  const groups = [...chunkBuildings(file).values()]
+  const groups = [...groupBuildingsByChunk(file).values()]
   const chunks: BuildingChunk[] = []
   groups.forEach((group, i) => {
     const mesh = buildBuildingMesh(group.list, file.q)

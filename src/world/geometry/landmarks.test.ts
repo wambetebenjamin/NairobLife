@@ -243,3 +243,23 @@ describe('landmarks in the city mesh', () => {
     expect(named.indices.length).toBeGreaterThan(plain.indices.length)
   })
 })
+
+describe('vertices the renderer never draws', () => {
+  // The lathe used to build the ring a dome's crown collapses to, and then close the shape
+  // with a separate tip vertex, leaving `segments` orphaned vertices per crown. Nothing on
+  // screen changed, so only an exporter noticed: three warned that the normals it was
+  // writing were not unit length. A mesh should not carry geometry no triangle uses.
+  for (const landmark of LANDMARKS) {
+    it(`leaves no orphaned or zero-normal vertices on the ${landmark.kind}`, () => {
+      const mesh = landmark.build({ x: 0, z: 0, radius: 28, height: 40 })
+      const used = new Set(mesh.indices)
+      expect(used.size).toBe(mesh.positions.length / 3)
+      for (let i = 0; i < mesh.normals.length; i += 3) {
+        expect(Math.hypot(mesh.normals[i], mesh.normals[i + 1], mesh.normals[i + 2])).toBeCloseTo(
+          1,
+          3,
+        )
+      }
+    })
+  }
+})
