@@ -32,7 +32,9 @@ const HAZE: { id: Haze; label: StringKey }[] = [
 /**
  * Settings. Everything here is saved in the browser (localStorage) and applies at once.
  *
- * TODO(audio): volume sliders once there is sound (city ambience, matatu horns, music).
+ * Volume and mute are here and take effect at once. What is still missing is per-source
+ * mixing: engines, horns, footsteps and the city bed share one gain, so a player cannot
+ * turn the traffic down while keeping the footsteps.
  * TODO(accessibility): reduced camera motion, larger HUD text, colour-blind map palette.
  */
 export function SettingsPanel() {
