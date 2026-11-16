@@ -136,7 +136,15 @@ Limits that a fresh fetch will **not** fix:
 npm run osm:export                       # dist/export/nairobi-cbd.glb
 npm run osm:export -- --out ~/city.glb   # somewhere else
 npm run osm:export -- --no-trees         # lighter file, for lighting or framing work
+npm run osm:export -- --tiles            # one .glb per 400 m block, for streaming
 ```
+
+`--tiles` writes a directory instead: about **39 files, 34 MB total**, one per block,
+named `tile_<cx>_<cz>.glb`, plus `ground.glb` for the terrain-wide layers. Every tile keeps
+the same origin and the same frame as the whole-zone file, so they sit side by side with no
+offset, and the triangle count is **identical** (769,937) — tiling moves geometry between
+files, it never drops or duplicates any. That is what a streamer needs: UE5 World Partition
+can load only the block the camera is in. `--tile-size <metres>` changes the block size.
 
 The game builds its geometry in a Web Worker from plain typed arrays
 (`src/world/geometry/*`). Those builders do not touch three.js or the DOM, so this script

@@ -19,7 +19,7 @@
  * from it (materials/buildingMaterial.ts). Geometry and vertex colours do, which is what
  * an artist or a lighting scene needs.
  */
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
@@ -28,9 +28,14 @@ import { createProjection } from '../../src/core/geo'
 import { buildBuildingMesh } from '../../src/world/geometry/buildings'
 import { buildGroundMesh, type FlatMesh } from '../../src/world/geometry/ground'
 import { buildRaisedRoads } from '../../src/world/geometry/raisedRoads'
-import { buildTreeChunks, scatterTrees, TREE_STRIDE } from '../../src/world/geometry/trees'
+import {
+  buildTreeChunks,
+  packTrees,
+  scatterTrees,
+  TREE_STRIDE,
+} from '../../src/world/geometry/trees'
 import { groupBuildingsByChunk } from '../../src/world/zone/chunks'
-import type { ZoneFile } from '../../src/world/zone/format'
+import type { ZoneBuilding, ZoneFile } from '../../src/world/zone/format'
 
 /**
  * three's GLB writer reads its buffer back through a FileReader, which Node does not
@@ -88,33 +93,50 @@ interface Options {
   ground: boolean
   raised: boolean
   trees: boolean
+  /** Write one file per chunk instead of one file for the whole zone. */
+  tiles: boolean
+  /** Chunk side in metres, if it should differ from the bake's. */
+  tileSize: number
 }
 
 function parseArgs(argv: string[]): Options {
-  const outAt = argv.indexOf('--out')
-  const out = outAt >= 0 ? argv[outAt + 1] : undefined
-  const skipped = new Set<string>()
-  if (outAt >= 0) {
-    skipped.add(argv[outAt])
-    skipped.add(outAt + 1 < argv.length ? argv[outAt + 1] : '')
+  const valueAt = (flag: string) => {
+    const at = argv.indexOf(flag)
+    return at >= 0 ? argv[at + 1] : undefined
   }
-  const zone = argv.find((arg) => !skipped.has(arg)) ?? 'nairobi-cbd'
+  const out = valueAt('--out')
+  const skipped = new Set<string>()
+  for (const flag of ['--out', '--tile-size']) {
+    const at = argv.indexOf(flag)
+    if (at < 0) continue
+    skipped.add(argv[at])
+    skipped.add(at + 1 < argv.length ? argv[at + 1] : '')
+  }
+  // Anything beginning with -- is ours, including a value we may not have consumed.
+  const zone = argv.find((arg) => !arg.startsWith('--') && !skipped.has(arg)) ?? 'nairobi-cbd'
   const flags = new Set(argv)
   return {
     zone,
-    out: out ?? `dist/export/${zone}.glb`,
+    out: out ?? (flags.has('--tiles') ? `dist/export/${zone}` : `dist/export/${zone}.glb`),
     buildings: !flags.has('--no-buildings'),
     ground: !flags.has('--no-ground'),
     raised: !flags.has('--no-raised'),
     trees: !flags.has('--no-trees'),
+    tiles: flags.has('--tiles'),
+    tileSize: Number(valueAt('--tile-size') ?? 400),
   }
 }
 
-function addBuildings(root: THREE.Group, file: ZoneFile, material: THREE.Material): number {
-  const groups = [...groupBuildingsByChunk(file).values()]
+function addBuildings(
+  root: THREE.Group,
+  buildings: readonly ZoneBuilding[],
+  q: number,
+  material: THREE.Material,
+): number {
+  const groups = [...groupBuildingsByChunk({ buildings: [...buildings], q }).values()]
   const mesh = { built: 0 }
   groups.forEach((group, i) => {
-    const built = buildBuildingMesh(group.list, file.q)
+    const built = buildBuildingMesh(group.list, q)
     if (built.indices.length === 0) return
     const object = meshFrom(built, material, `buildings_${i}_${group.cx}_${group.cz}`)
     object.userData.buildings = group.list.length
@@ -173,30 +195,27 @@ async function main(): Promise<void> {
   }
   const material = cityMaterial()
 
-  const built = options.buildings ? addBuildings(root, file, material) : 0
+  const built = options.buildings ? addBuildings(root, file.buildings, file.q, material) : 0
   if (options.ground) addFlat(root, 'ground', buildGroundMesh(file), false)
   if (options.raised) addFlat(root, 'raised', buildRaisedRoads(file), true)
   const treeCount = options.trees ? addTrees(root, file, material) : 0
 
-  const result = await new GLTFExporter().parseAsync(root, {
-    binary: true,
-    // Vertex colours must reach COLOR_0 or every surface arrives white in Blender.
-    includeCustomExtensions: false,
-    // ODbL requires attribution, and a .glb is a copy of the database. The zone already
-    // carries the exact wording, so use it rather than composing a near-duplicate.
-    copyright: `${file.attribution}. https://www.openstreetmap.org/copyright`,
-  })
-  if (!(result instanceof ArrayBuffer)) throw new Error('Expected binary glTF output')
+  const copyright = `${file.attribution}. https://www.openstreetmap.org/copyright`
+  const exportGlb = async (group: THREE.Group): Promise<Buffer> => {
+    const result = await new GLTFExporter().parseAsync(group, {
+      binary: true,
+      // Vertex colours must reach COLOR_0 or every surface arrives white in Blender.
+      includeCustomExtensions: false,
+      // ODbL requires attribution, and a .glb is a copy of the database. The zone already
+      // carries the exact wording, so use it rather than composing a near-duplicate.
+      copyright,
+    })
+    if (!(result instanceof ArrayBuffer)) throw new Error('Expected binary glTF output')
+    return Buffer.from(result)
+  }
 
-  const outPath = resolve(options.out)
-  mkdirSync(dirname(outPath), { recursive: true })
-  writeFileSync(outPath, Buffer.from(result))
-
-  // The exporter cannot tell a measured height from an estimate, and neither can whoever
-  // opens the file. Say it out loud instead of letting the map look more surveyed than it is.
-  const measured = file.buildings.filter((building) => building.est !== 1).length
   const projection = createProjection(file.origin)
-
+  const measured = file.buildings.filter((b) => b.est !== 1).length
   console.log(`zone     ${file.name} (q=${file.q}, format v${file.v})`)
   if (options.buildings) console.log(`buildings ${built.toLocaleString('en-GB')}`)
   if (options.trees) console.log(`trees    ${treeCount.toLocaleString('en-GB')}`)
@@ -207,7 +226,117 @@ async function main(): Promise<void> {
   console.log(
     `scale    ${projection.metresPerDegLon.toFixed(1)} m per degree of longitude at this latitude`,
   )
-  console.log(`wrote    ${options.out}  ${(statSync(outPath).size / 1e6).toFixed(2)} MB`)
+
+  if (!options.tiles) {
+    const outPath = resolve(options.out)
+    mkdirSync(dirname(outPath), { recursive: true })
+    const bytes = await exportGlb(root)
+    writeFileSync(outPath, bytes)
+    console.log(`wrote    ${options.out}  ${(bytes.byteLength / 1e6).toFixed(2)} MB`)
+    return
+  }
+
+  // ---- tiled export --------------------------------------------------------
+  // One file per chunk, named for the chunk, so a streamer (UE5 World Partition, or any
+  // other) can load the block the camera is in and nothing else. Every tile keeps the
+  // same origin and the same frame as the whole-zone file, which is what lets them sit
+  // side by side with no offset: `extras.origin` is identical in all of them.
+  const dir = resolve(options.out)
+  mkdirSync(dir, { recursive: true })
+  const size = options.tileSize
+  const cells = new Map<
+    string,
+    { cx: number; cz: number; buildings: ZoneBuilding[]; trees: THREE.Object3D[] }
+  >()
+  const cellFor = (x: number, z: number) => {
+    const cx = Math.floor(x / size)
+    const cz = Math.floor(z / size)
+    const key = `${cx},${cz}`
+    let cell = cells.get(key)
+    if (!cell) {
+      cell = { cx, cz, buildings: [], trees: [] }
+      cells.set(key, cell)
+    }
+    return cell
+  }
+
+  if (options.buildings) {
+    const groups = [...groupBuildingsByChunk(file).values()]
+    for (const group of groups) {
+      // The bake chunks at CHUNK_SIZE; a tile may hold several, or a slice of one. Place
+      // each building in the cell its first corner falls in, the same rule the worker uses.
+      const byCell = new Map<string, ZoneBuilding[]>()
+      for (const building of group.list) {
+        const key = `${cellFor(building.p[0] / file.q, building.p[1] / file.q).cx},${cellFor(building.p[0] / file.q, building.p[1] / file.q).cz}`
+        const list = byCell.get(key)
+        if (list) list.push(building)
+        else byCell.set(key, [building])
+      }
+      for (const [key, list] of byCell) {
+        const [cx, cz] = key.split(',').map(Number)
+        cellFor(cx * size + 0.001, cz * size + 0.001).buildings.push(...list)
+      }
+    }
+  }
+
+  if (options.trees) {
+    const packed = scatterTrees(file)
+    const cellTrees = new Map<string, number[]>()
+    for (let i = 0; i < packed.length / TREE_STRIDE; i++) {
+      const o = i * TREE_STRIDE
+      const cell = cellFor(packed[o], packed[o + 1])
+      const key = `${cell.cx},${cell.cz}`
+      const list = cellTrees.get(key)
+      if (list) list.push(i)
+      else cellTrees.set(key, [i])
+    }
+    const treeMaterial = cityMaterial()
+    for (const [key, indices] of cellTrees) {
+      const [cx, cz] = key.split(',').map(Number)
+      const cell = cellFor(cx * size + 0.001, cz * size + 0.001)
+      const packedSubset = packTrees(packed, indices)
+      const built = buildTreeChunks(packedSubset)
+      const group = new THREE.Group()
+      group.name = `trees_${key}`
+      for (const chunk of built) {
+        if (chunk.leaves.indices.length) group.add(meshFrom(chunk.leaves, treeMaterial, 'leaves'))
+        if (chunk.wood.indices.length) group.add(meshFrom(chunk.wood, treeMaterial, 'wood'))
+      }
+      cell.trees.push(group)
+    }
+  }
+
+  // Bare ground and raised decks are drawn once, in the cell that holds the origin, so the
+  // tiles that stream in do not each carry a duplicate copy of the whole terrain.
+  let tilesWritten = 0
+  let tileBytes = 0
+  const keys = [...cells.keys()].sort()
+  if (options.ground || options.raised) keys.push('__ground__')
+
+  for (const key of keys) {
+    const tile = new THREE.Group()
+    tile.name = key === '__ground__' ? 'ground' : `tile_${key}`
+    tile.userData = root.userData
+    if (key === '__ground__') {
+      if (options.ground) addFlat(tile, 'ground', buildGroundMesh(file), false)
+      if (options.raised) addFlat(tile, 'raised', buildRaisedRoads(file), true)
+    } else {
+      const cell = cells.get(key)
+      if (!cell) continue
+      if (cell.buildings.length) addBuildings(tile, cell.buildings, file.q, material)
+      for (const tree of cell.trees) tile.add(tree)
+    }
+    if (tile.children.length === 0) continue
+    const bytes = await exportGlb(tile)
+    const name = key === '__ground__' ? 'ground.glb' : `tile_${key.replace(',', '_')}.glb`
+    writeFileSync(resolve(dir, name), bytes)
+    tilesWritten++
+    tileBytes += bytes.byteLength
+  }
+
+  console.log(
+    `wrote    ${options.out}/  ${tilesWritten} tiles, ${(tileBytes / 1e6).toFixed(2)} MB total, ${size} m per tile`,
+  )
 }
 
 void main()
