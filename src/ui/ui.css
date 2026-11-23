@@ -2,20 +2,20 @@
  * All interface styling. The loading screen's CSS lives in index.html instead, so that
  * it works before this file has loaded.
  *
- * Palette: warm charcoal, soft stone text, and a muted eucalyptus accent. Flag colours
- * remain confined to the small flag mark rather than competing with the whole interface.
+ * Palette: near-black panels, warm off-white text, matatu yellow for anything you can
+ * press, and the red and green of the Kenyan flag as small accents.
  */
 :root {
-  --ink: #171a18;
-  --panel: rgba(27, 31, 28, 0.82);
-  --panel-solid: #252a26;
-  --line: rgba(237, 233, 220, 0.14);
-  --text: #eeeae1;
-  --muted: #beb9ac;
-  --accent: #66816d;
-  --accent-ink: #f5f3ec;
-  --red: #966a60;
-  --green: #66816d;
+  --ink: #0e0f12;
+  --panel: rgba(14, 15, 18, 0.74);
+  --panel-solid: #15171c;
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f4f1ea;
+  --muted: #b3aea2;
+  --accent: #00843d;
+  --accent-ink: #ffffff;
+  --red: #bb0000;
+  --green: #00843d;
   --radius: 12px;
   --display: 'Bungee', 'Arial Black', system-ui, sans-serif;
   --pad: clamp(12px, 2vw, 22px);
@@ -168,13 +168,13 @@ kbd {
 
 .button--primary {
   border-color: transparent;
-  background: linear-gradient(135deg, #708b76, #536d59);
+  background: linear-gradient(135deg, #00843d, #006b32);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(83, 109, 89, 0.22);
+  box-shadow: 0 8px 24px rgba(0, 132, 61, 0.25);
 }
 
 .button--primary:hover {
-  background: linear-gradient(135deg, #7b9681, #66816d);
+  background: linear-gradient(135deg, #00a650, #00843d);
 }
 
 .button--quiet {
@@ -253,88 +253,46 @@ kbd {
   font-size: clamp(15px, 1.5vw, 18px);
 }
 
-.menu__modes {
-  display: grid;
-  gap: 10px;
-}
-
-/*
- * A mode card: its name, a hint under it and, for a mode that is not built yet, a badge
- * at the top right. The card is a row that wraps, so when the name and the badge do not
- * fit side by side (a narrow phone, a long name) the badge takes a line of its own
- * instead of covering the name.
- */
-.mode {
+.menu__start {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 2px 12px;
-  padding: 13px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(20, 22, 27, 0.72);
-  text-align: left;
-  backdrop-filter: blur(6px);
-  transition:
-    transform 0.12s,
-    background 0.15s;
-}
-
-.mode__name {
-  flex: 1 1 auto;
-  font: 400 19px/1.15 var(--display);
-}
-
-/* Always a line of its own, after the name and the badge. */
-.mode__hint {
-  order: 1;
-  flex: 0 0 100%;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.mode__badge {
-  flex: none;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.mode--primary {
-  position: relative;
-  padding: 18px 18px 18px 21px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-left: 3px solid var(--red);
-  background: linear-gradient(135deg, #708b76, #536d59 72%, #465d4c);
+  width: fit-content;
+  min-width: 232px;
+  margin-top: 2px;
+  padding: 15px 20px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  background: linear-gradient(135deg, #00843d, #006b32);
   color: #fff;
-  box-shadow:
-    0 12px 34px rgba(0, 0, 0, 0.3),
-    0 8px 30px rgba(83, 109, 89, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  text-align: left;
+  box-shadow: 0 8px 24px rgba(0, 132, 61, 0.2);
+  transition:
+    background 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
-.mode--primary .mode__name {
-  font-size: 27px;
+.menu__start span {
+  font: 400 20px/1.2 var(--display);
 }
 
-.mode--primary .mode__hint {
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 600;
+.menu__start small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 12px;
+  font-weight: 550;
 }
 
-.mode--primary:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(135deg, #7b9681, #66816d 72%, #536d59);
+.menu__start:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #00a650, #00843d);
+  box-shadow: 0 10px 26px rgba(0, 132, 61, 0.25);
 }
 
-.mode:disabled {
-  cursor: default;
-  opacity: 0.72;
+.menu__start:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(0, 132, 61, 0.2);
 }
 
 .menu__links {
@@ -358,7 +316,6 @@ kbd {
 .menu__footer a {
   color: inherit;
 }
-
 
 /* ------------------------------------------------------------------ dialogs */
 
@@ -962,8 +919,14 @@ kbd {
   margin: -62px 0 0 -62px;
   border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.16), rgba(10,14,17,.52) 72%);
-  box-shadow: inset 0 1px 12px rgba(255,255,255,.08), 0 8px 28px rgba(0,0,0,.22);
+  background: radial-gradient(
+    circle at 35% 25%,
+    rgba(255, 255, 255, 0.16),
+    rgba(10, 14, 17, 0.52) 72%
+  );
+  box-shadow:
+    inset 0 1px 12px rgba(255, 255, 255, 0.08),
+    0 8px 28px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(5px);
   pointer-events: none;
 }
@@ -1001,22 +964,29 @@ kbd {
   height: 66px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(42,48,52,.72), rgba(9,12,14,.72));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 7px 20px rgba(0,0,0,.28);
+  background: linear-gradient(145deg, rgba(42, 48, 52, 0.72), rgba(9, 12, 14, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 7px 20px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(8px);
   font-size: 12px;
   font-weight: 750;
-  letter-spacing: .01em;
+  letter-spacing: 0.01em;
   touch-action: manipulation;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 100ms ease, background 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 100ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .pad:active,
 .pad.is-on {
-  transform: scale(.94);
-  box-shadow: inset 0 2px 8px rgba(0,0,0,.22), 0 3px 10px rgba(0,0,0,.2);
+  transform: scale(0.94);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.22),
+    0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 .pad--big {
@@ -1139,10 +1109,6 @@ kbd {
 
   .wordmark {
     font-size: clamp(34px, 9vh, 56px);
-  }
-
-  .mode:disabled {
-    display: none;
   }
 }
 
