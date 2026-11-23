@@ -30,15 +30,12 @@ import { Traffic } from './vehicles/traffic/Traffic'
 import { Ride } from './vehicles/ride/Ride'
 import { planFleet } from './vehicles/placement'
 import { BOUNDARY_INSET } from './world/Boundary'
-import { Campaign } from './world/campaign/Campaign'
-import { planCampaign } from './world/campaign/placement'
 import { World } from './world/World'
 import { Environment } from './world/environment/Environment'
 import { StepClock } from './world/physics/StepClock'
 import { GamepadPump } from './input/gamepadPump'
 import { CitySound } from './game/CitySound'
 import { Pedestrians } from './world/pedestrians/Pedestrians'
-import { Billboards } from './world/furniture/Billboards'
 import { StreetFurniture } from './world/furniture/StreetFurniture'
 import type { LoadedZone } from './world/zone/loadZone'
 
@@ -73,14 +70,6 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
       }),
     [zone, start],
   )
-  const campaign = useMemo(
-    () =>
-      zone.id === 'nairobi-cbd'
-        ? planCampaign(zone.index, zone.geometry.trees, placements, start)
-        : null,
-    [zone, start, placements],
-  )
-
   return (
     <Canvas
       className="game-canvas"
@@ -105,11 +94,9 @@ export function GameCanvas({ zone }: { zone: LoadedZone }) {
           {/* Polls a controller before anything reads input; runs at -60, ahead of physics. */}
           <GamepadPump />
           <World zone={zone} />
-          <Billboards zone={zone} start={start} />
           <StreetFurniture zone={zone} />
-          <Pedestrians zone={zone} start={start} exclusion={campaign} />
+          <Pedestrians zone={zone} start={start} />
           <Vehicles placements={placements} />
-          {campaign && <Campaign site={campaign} />}
           <Traffic zone={zone} start={start} />
           <Player start={start} />
           <CameraRig />

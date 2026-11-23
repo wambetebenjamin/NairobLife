@@ -163,25 +163,21 @@ export function footstep(
  * street is not a sequence of events, it is a floor.
  */
 export function cityBedLoop(tone: number, rate = SAMPLE_RATE): Float32Array<ArrayBuffer> {
-  // A whole number of cycles per buffer, like the engines, so it loops without a seam.
-  const seconds = 1
-  const length = Math.round(seconds * rate)
+  // A broadband, filtered street wash: no repeating low note or pulse that can read as
+  // a heartbeat. The cutoff rises gently beside wider roads, where distant traffic is brighter.
+  const length = Math.round(rate)
   const samples = new Float32Array(length)
   let state = 0x9e3779b9
   let low = 0
-  // Snap the tone so the buffer holds an exact number of cycles.
-  const cycles = Math.max(1, Math.round(tone))
+  const cutoff = 0.025 + Math.max(0, Math.min(1, (tone - 200) / 200)) * 0.035
   for (let i = 0; i < length; i++) {
-    const t = i / rate
     state = (state * 1664525 + 1013904223) >>> 0
     const white = (state / 0xffffffff) * 2 - 1
-    low += (white - low) * 0.02
-    const drone =
-      Math.sin(2 * Math.PI * cycles * t) * 0.5 +
-      Math.sin(2 * Math.PI * cycles * 2 * t) * 0.22 +
-      Math.sin(2 * Math.PI * cycles * 3 * t) * 0.1
-    samples[i] = drone * 0.5 + low * 0.8
+    low += (white - low) * cutoff
+    samples[i] = low
   }
+  seamless(samples, Math.round(0.02 * rate))
+  normalise(samples, 0.55)
   return samples
 }
 

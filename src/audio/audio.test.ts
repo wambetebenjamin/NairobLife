@@ -167,7 +167,7 @@ describe('a footstep', () => {
 })
 
 describe("the city's own bed", () => {
-  it('is a seamless drone that never clips', () => {
+  it('is a seamless, non-tonal street wash that never clips', () => {
     const samples = cityBedLoop(220)
     expect(samples.length).toBe(SAMPLE_RATE)
     let peak = 0
@@ -180,6 +180,17 @@ describe("the city's own bed", () => {
     let quiet = 0
     for (const sample of samples) if (Math.abs(sample) < 0.02) quiet++
     expect(quiet / samples.length).toBeLessThan(0.3)
+
+    // No strong periodic carrier at the old low drone pitch: this should sound like a
+    // soft traffic wash, not a pulsing or heartbeat-like tone.
+    const lag = Math.round(SAMPLE_RATE / 220)
+    let product = 0
+    let energy = 0
+    for (let i = 0; i < samples.length - lag; i++) {
+      product += samples[i] * samples[i + lag]
+      energy += samples[i] * samples[i]
+    }
+    expect(Math.abs(product / energy)).toBeLessThan(0.2)
   })
 
   it('pitches with the road: a bigger road hums higher', () => {

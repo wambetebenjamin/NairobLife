@@ -112,6 +112,7 @@ export function CameraRig() {
     }
 
     const firstPerson = game.settings.cameraMode === 'first'
+    const reduceMotion = game.settings.reduceMotion
     const driving = runtime.driving >= 0
     const v = runtime.vehicle
     const spec = VEHICLES[v.kind]
@@ -122,8 +123,11 @@ export function CameraRig() {
       const look = input.consumeLook()
       looked = look.x !== 0 || look.y !== 0
       const speed = game.settings.sensitivity
-      cam.yaw = MathUtils.euclideanModulo(cam.yaw - look.x * speed + Math.PI, Math.PI * 2) - Math.PI
-      cam.pitch += look.y * speed * (game.settings.invertY ? -1 : 1)
+      const motionScale = reduceMotion ? 0.65 : 1
+      cam.yaw =
+        MathUtils.euclideanModulo(cam.yaw - look.x * speed * motionScale + Math.PI, Math.PI * 2) -
+        Math.PI
+      cam.pitch += look.y * speed * motionScale * (game.settings.invertY ? -1 : 1)
       const zoom = input.consumeZoom()
       if (zoom && !firstPerson) {
         cam.distance = clamp(
@@ -170,13 +174,17 @@ export function CameraRig() {
       : clamp(cam.pitch, CAMERA.minPitch, CAMERA.maxPitch)
 
     // A hard landing dips the camera briefly.
-    const thump = p.landingImpact * 0.3 * Math.exp(-p.landedAgo * 9) * Math.cos(p.landedAgo * 16)
+    const thump = reduceMotion
+      ? 0
+      : p.landingImpact * 0.3 * Math.exp(-p.landedAgo * 9) * Math.cos(p.landedAgo * 16)
 
     // Field of view opens up at a sprint, and a good deal more at speed on the road.
-    const kick = driving
-      ? DRIVING.speedFovKick * clamp(Math.abs(v.speed) / spec.topSpeed, 0, 1)
-      : CAMERA.sprintFovKick *
-        clamp((p.speed - PLAYER.jogSpeed) / (PLAYER.sprintSpeed - PLAYER.jogSpeed), 0, 1)
+    const kick = reduceMotion
+      ? 0
+      : driving
+        ? DRIVING.speedFovKick * clamp(Math.abs(v.speed) / spec.topSpeed, 0, 1)
+        : CAMERA.sprintFovKick *
+          clamp((p.speed - PLAYER.jogSpeed) / (PLAYER.sprintSpeed - PLAYER.jogSpeed), 0, 1)
     rig.fov = damp(rig.fov, CAMERA.fov + kick, driving ? 3 : 6, dt)
     setFov(camera, rig.fov)
 

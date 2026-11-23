@@ -78,14 +78,20 @@
       }
       .boot__flag {
         display: flex;
-        height: 6px;
-        width: 96px;
+        flex-direction: column;
+        height: 27px;
+        width: 42px;
         margin: 0 auto 22px;
+        border: 1px solid rgba(255, 255, 255, 0.32);
         border-radius: 3px;
         overflow: hidden;
       }
       .boot__flag i {
         flex: 1;
+      }
+      .boot__flag i:nth-child(2),
+      .boot__flag i:nth-child(4) {
+        flex: 0 0 2px;
       }
       .boot__title {
         margin: 0;
@@ -101,7 +107,7 @@
         text-transform: uppercase;
       }
       .boot__title span {
-        color: #ffd21f;
+        color: #00843d;
       }
       .boot__tag {
         margin: 12px 0 34px;
@@ -119,7 +125,7 @@
         height: 100%;
         width: 4%;
         border-radius: 4px;
-        background: linear-gradient(90deg, #ffd21f, #ffb300);
+        background: linear-gradient(90deg, #00843d, #00a650);
         transition: width 0.25s ease;
       }
       .boot__status {
@@ -141,14 +147,14 @@
         padding: 10px 22px;
         border: 0;
         border-radius: 8px;
-        background: #ffd21f;
-        color: #0e0f12;
+        background: #00843d;
+        color: #ffffff;
         font: inherit;
         font-weight: 700;
         cursor: pointer;
       }
       .boot--error .boot__bar i {
-        background: #c8102e;
+        background: #bb0000;
       }
     </style>
   </head>
@@ -156,8 +162,9 @@
     <div id="boot" class="boot" role="status" aria-live="polite">
       <div class="boot__inner">
         <div class="boot__flag" aria-hidden="true">
-          <i style="background: #111"></i><i style="background: #c8102e"></i
-          ><i style="background: #1f9d55"></i>
+          <i style="background: #000000"></i><i style="background: #ffffff"></i
+          ><i style="background: #bb0000"></i><i style="background: #ffffff"></i
+          ><i style="background: #00843d"></i>
         </div>
         <h1 class="boot__title"><small>ka</small><span>NAIRO</span></h1>
         <p class="boot__tag">Free-roam Nairobi. No download.</p>

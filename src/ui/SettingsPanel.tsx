@@ -32,8 +32,7 @@ const HAZE: { id: Haze; label: StringKey }[] = [
 /**
  * Settings. Everything here is saved in the browser (localStorage) and applies at once.
  *
- * TODO(audio): volume sliders once there is sound (city ambience, matatu horns, music).
- * TODO(accessibility): reduced camera motion, larger HUD text, colour-blind map palette.
+ * TODO(accessibility): a colour-blind-friendly minimap palette.
  */
 export function SettingsPanel() {
   const t = useT()
@@ -133,6 +132,21 @@ export function SettingsPanel() {
           <Toggle
             checked={settings.showControls}
             onChange={(showControls) => update({ showControls })}
+          />
+        </Row>
+        <Row label="Reduce camera motion">
+          <Toggle
+            checked={settings.reduceMotion}
+            onChange={(reduceMotion) => update({ reduceMotion })}
+          />
+        </Row>
+        <Row label="Larger HUD text">
+          <Toggle checked={settings.largeHud} onChange={(largeHud) => update({ largeHud })} />
+        </Row>
+        <Row label="Colour-blind-friendly map">
+          <Toggle
+            checked={settings.colourBlindMap}
+            onChange={(colourBlindMap) => update({ colourBlindMap })}
           />
         </Row>
       </div>

@@ -33,20 +33,40 @@ const COLOURS = {
   rail: '#8a6f6f',
 }
 
-const ROAD_STYLE: Record<RoadKind, { colour: string; order: number; minWidth: number }> = {
-  footway: { colour: COLOURS.path, order: 0, minWidth: 1 },
-  steps: { colour: COLOURS.path, order: 0, minWidth: 1 },
-  pedestrian: { colour: COLOURS.path, order: 0, minWidth: 1.5 },
-  service: { colour: COLOURS.road, order: 1, minWidth: 1.2 },
-  residential: { colour: COLOURS.road, order: 1, minWidth: 1.8 },
-  tertiary: { colour: COLOURS.road, order: 2, minWidth: 2.2 },
-  secondary: { colour: COLOURS.major, order: 3, minWidth: 2.6 },
-  primary: { colour: COLOURS.major, order: 4, minWidth: 3 },
-  trunk: { colour: COLOURS.trunk, order: 5, minWidth: 3.4 },
-  motorway: { colour: COLOURS.expressway, order: 6, minWidth: 3 },
+const ROAD_STYLE: Record<
+  RoadKind,
+  { group: 'path' | 'road' | 'major' | 'trunk' | 'expressway'; order: number; minWidth: number }
+> = {
+  footway: { group: 'path', order: 0, minWidth: 1 },
+  steps: { group: 'path', order: 0, minWidth: 1 },
+  pedestrian: { group: 'path', order: 0, minWidth: 1.5 },
+  service: { group: 'road', order: 1, minWidth: 1.2 },
+  residential: { group: 'road', order: 1, minWidth: 1.8 },
+  tertiary: { group: 'road', order: 2, minWidth: 2.2 },
+  secondary: { group: 'major', order: 3, minWidth: 2.6 },
+  primary: { group: 'major', order: 4, minWidth: 3 },
+  trunk: { group: 'trunk', order: 5, minWidth: 3.4 },
+  motorway: { group: 'expressway', order: 6, minWidth: 3 },
 }
 
-export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
+const ACCESSIBLE_COLOURS = {
+  ground: '#101820',
+  building: '#334155',
+  buildingEdge: '#94a3b8',
+  park: '#005f73',
+  water: '#56b4e9',
+  parking: '#263746',
+  plaza: '#475569',
+  road: '#f0f0f0',
+  major: '#ffbf00',
+  trunk: '#d55e00',
+  expressway: '#cc79a7',
+  path: '#e6e6e6',
+  rail: '#f0e442',
+}
+
+export function renderMapImage(zone: ZoneFile, scale: number, colourBlind = false): MapImage {
+  const colours = colourBlind ? ACCESSIBLE_COLOURS : COLOURS
   const [minX, minZ, maxX, maxZ] = zone.bounds
   const width = maxX - minX
   const height = maxZ - minZ
@@ -64,7 +84,7 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
     if (close) ctx.closePath()
   }
 
-  ctx.fillStyle = COLOURS.ground
+  ctx.fillStyle = colours.ground
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
@@ -76,12 +96,12 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
     for (const hole of area.hs ?? []) trace(hole, true)
     ctx.fillStyle =
       area.k === 'water'
-        ? COLOURS.water
+        ? colours.water
         : area.k === 'parking'
-          ? COLOURS.parking
+          ? colours.parking
           : area.k === 'plaza'
-            ? COLOURS.plaza
-            : COLOURS.park
+            ? colours.plaza
+            : colours.park
     ctx.fill('evenodd')
   }
 
@@ -93,7 +113,7 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
       const style = ROAD_STYLE[road.k]
       ctx.beginPath()
       trace(road.p, false)
-      ctx.strokeStyle = style.colour
+      ctx.strokeStyle = colours[style.group]
       ctx.lineWidth = Math.max(style.minWidth, road.w * scale)
       ctx.stroke()
     }
@@ -101,7 +121,7 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
   drawRoads(false)
 
   // ---- railways: a solid line with ticks
-  ctx.strokeStyle = COLOURS.rail
+  ctx.strokeStyle = colours.rail
   for (const rail of zone.rails) {
     ctx.beginPath()
     trace(rail.p, false)
@@ -115,8 +135,8 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
   ctx.setLineDash([])
 
   // ---- buildings
-  ctx.fillStyle = COLOURS.building
-  ctx.strokeStyle = COLOURS.buildingEdge
+  ctx.fillStyle = colours.building
+  ctx.strokeStyle = colours.buildingEdge
   ctx.lineWidth = 0.6
   for (const building of zone.buildings) {
     if ((building.b ?? 0) > 3) continue // parts that float above the ground
@@ -133,16 +153,21 @@ export function renderMapImage(zone: ZoneFile, scale: number): MapImage {
   return { canvas, scale, originX: minX, originZ: minZ, width, height }
 }
 
-const cache = new WeakMap<ZoneFile, MapImage>()
+const cache = new WeakMap<ZoneFile, Map<boolean, MapImage>>()
 
-/** The map picture for a zone, drawn on first use and then reused. */
-export function getMapImage(zone: ZoneFile): MapImage {
-  let image = cache.get(zone)
+/** The map picture for a zone and palette, drawn on first use and then reused. */
+export function getMapImage(zone: ZoneFile, colourBlind = false): MapImage {
+  let variants = cache.get(zone)
+  if (!variants) {
+    variants = new Map()
+    cache.set(zone, variants)
+  }
+  let image = variants.get(colourBlind)
   if (!image) {
     // Phones get a smaller picture: it is shown smaller, and memory is tighter.
     const coarse = window.matchMedia?.('(pointer: coarse)').matches
-    image = renderMapImage(zone, coarse ? 0.5 : 0.75)
-    cache.set(zone, image)
+    image = renderMapImage(zone, coarse ? 0.5 : 0.75, colourBlind)
+    variants.set(colourBlind, image)
   }
   return image
 }

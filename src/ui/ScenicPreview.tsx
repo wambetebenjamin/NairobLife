@@ -148,66 +148,164 @@ function Acacia({ x, z, s = 1 }: { x: number; z: number; s?: number }) {
 }
 
 function Giraffe({ x, z, turn = 0 }: { x: number; z: number; turn?: number }) {
+  const coat = '#c99554'
+  const shadow = '#855332'
   return (
     <group position={[x, 0, z]} rotation={[0, turn, 0]}>
-      <mesh position={[0, 2.05, 0]}>
-        <boxGeometry args={[0.9, 1, 1.8]} />
-        <meshLambertMaterial color="#c79554" />
+      {/* Soft, tapered torso and sloping shoulder give the silhouette its real proportions. */}
+      <mesh position={[0, 2.05, 0]} scale={[0.54, 0.58, 1.05]}>
+        <sphereGeometry args={[1, 24, 16]} />
+        <meshLambertMaterial color={coat} />
       </mesh>
-      {[-0.3, 0.3].flatMap((dx) =>
-        [-0.65, 0.65].map((dz) => (
-          <mesh key={`${dx},${dz}`} position={[dx, 0.86, dz]}>
-            <boxGeometry args={[0.17, 1.8, 0.18]} />
-            <meshLambertMaterial color="#9b754c" />
+      <mesh position={[0, 2.28, -0.68]} rotation={[-0.26, 0, 0]} scale={[0.37, 0.4, 0.62]}>
+        <sphereGeometry args={[1, 20, 14]} />
+        <meshLambertMaterial color={coat} />
+      </mesh>
+      {/* Long, gently leaning neck; the smaller shoulder end tapers toward the head. */}
+      <mesh position={[0, 3.47, -0.78]} rotation={[-0.28, 0, 0]}>
+        <cylinderGeometry args={[0.17, 0.28, 2.35, 16, 4]} />
+        <meshLambertMaterial color={coat} />
+      </mesh>
+      <mesh position={[0, 4.72, -1.03]} rotation={[-0.22, 0, 0]} scale={[0.24, 0.28, 0.42]}>
+        <sphereGeometry args={[1, 20, 14]} />
+        <meshLambertMaterial color={coat} />
+      </mesh>
+      <mesh position={[0, 4.64, -1.37]} rotation={[-0.08, 0, 0]} scale={[0.15, 0.13, 0.28]}>
+        <sphereGeometry args={[1, 16, 10]} />
+        <meshLambertMaterial color="#dfb97d" />
+      </mesh>
+      {/* Ossicones, ears and a small dark eye make the head read clearly at preview scale. */}
+      {[-0.13, 0.13].map((side) => (
+        <group key={side}>
+          <mesh position={[side, 5.02, -1.01]}>
+            <cylinderGeometry args={[0.035, 0.055, 0.28, 8]} />
+            <meshLambertMaterial color={shadow} />
           </mesh>
+          <mesh position={[side, 5.17, -1.01]}>
+            <sphereGeometry args={[0.08, 10, 8]} />
+            <meshLambertMaterial color="#4d382b" />
+          </mesh>
+          <mesh
+            position={[side * 1.65, 4.86, -0.9]}
+            rotation={[0, 0, side * -0.5]}
+            scale={[0.2, 0.07, 0.11]}
+          >
+            <sphereGeometry args={[1, 12, 8]} />
+            <meshLambertMaterial color={coat} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0.2, 4.77, -1.26]}>
+        <sphereGeometry args={[0.045, 10, 8]} />
+        <meshBasicMaterial color="#171411" />
+      </mesh>
+      {/* Four sturdy legs with dark hooves, spaced naturally beneath the barrel. */}
+      {[-0.34, 0.34].flatMap((side) =>
+        [-0.72, 0.72].map((along) => (
+          <group key={`${side},${along}`} position={[side, 0, along]}>
+            <mesh position={[0, 0.81, 0]}>
+              <cylinderGeometry args={[0.085, 0.13, 1.55, 12, 2]} />
+              <meshLambertMaterial color={coat} />
+            </mesh>
+            <mesh position={[0, 0.07, 0.015]} scale={[1, 0.72, 1.3]}>
+              <sphereGeometry args={[0.12, 12, 8]} />
+              <meshLambertMaterial color="#30241d" />
+            </mesh>
+          </group>
         )),
       )}
-      <mesh position={[0, 3.45, -0.65]} rotation={[-0.12, 0, 0]}>
-        <boxGeometry args={[0.34, 2.5, 0.34]} />
-        <meshLambertMaterial color="#c79554" />
-      </mesh>
-      <mesh position={[0, 4.7, -0.87]}>
-        <boxGeometry args={[0.38, 0.43, 0.75]} />
-        <meshLambertMaterial color="#c79554" />
-      </mesh>
-      {[-0.15, 0.15].map((x) => (
-        <mesh key={x} position={[x, 5, -0.65]}>
-          <boxGeometry args={[0.07, 0.25, 0.07]} />
-          <meshLambertMaterial color="#664936" />
+      {/* Irregular flattened patches across the flank suggest the reticulated coat. */}
+      {[
+        [-0.51, 2.23, -0.62, 0.15],
+        [-0.52, 2.2, -0.13, 0.18],
+        [-0.48, 2.28, 0.36, 0.14],
+        [0.51, 2.18, -0.5, 0.17],
+        [0.52, 2.24, 0.04, 0.13],
+        [0.49, 2.12, 0.52, 0.18],
+      ].map(([px, py, pz, radius], i) => (
+        <mesh key={i} position={[px, py, pz]} scale={[0.035, radius, radius * 0.8]}>
+          <sphereGeometry args={[1, 10, 8]} />
+          <meshLambertMaterial color={shadow} />
         </mesh>
       ))}
+      <mesh position={[0, 2.32, 1.04]} rotation={[0.4, 0, 0]}>
+        <cylinderGeometry args={[0.025, 0.045, 0.56, 8]} />
+        <meshLambertMaterial color={shadow} />
+      </mesh>
     </group>
   )
 }
 
 function Zebra({ x, z, turn = 0 }: { x: number; z: number; turn?: number }) {
+  const dark = '#252522'
   return (
     <group position={[x, 0, z]} rotation={[0, turn, 0]}>
-      <mesh position={[0, 1.15, 0]}>
-        <boxGeometry args={[0.65, 0.65, 1.55]} />
+      <mesh position={[0, 1.18, 0]} scale={[0.45, 0.48, 0.96]}>
+        <sphereGeometry args={[1, 24, 16]} />
         <meshLambertMaterial color="#f1efe4" />
       </mesh>
-      {[-0.48, -0.22, 0.04, 0.3, 0.55].map((z) => (
-        <mesh key={z} position={[0, 1.15, z]}>
-          <boxGeometry args={[0.67, 0.67, 0.09]} />
-          <meshLambertMaterial color="#292929" />
-        </mesh>
-      ))}
-      {[-0.22, 0.22].flatMap((dx) =>
-        [-0.55, 0.55].map((dz) => (
-          <mesh key={`${dx},${dz}`} position={[dx, 0.42, dz]}>
-            <boxGeometry args={[0.11, 0.85, 0.12]} />
-            <meshLambertMaterial color="#33302e" />
+      {/* Narrow curved rings wrap the barrel, rather than sitting as rectangular stickers. */}
+      {[-0.68, -0.46, -0.23, 0.02, 0.27, 0.5, 0.7].map((at, i) => {
+        const radius = Math.sqrt(Math.max(0.08, 1 - (at / 0.96) ** 2)) * 0.42
+        return (
+          <mesh key={at} position={[0, 1.18, at]}>
+            <torusGeometry args={[radius, i % 2 ? 0.035 : 0.05, 6, 18]} />
+            <meshLambertMaterial color={dark} />
           </mesh>
+        )
+      })}
+      {/* Slender legs: cream socks above dark hooves, with zebra striping on the upper legs. */}
+      {[-0.24, 0.24].flatMap((side) =>
+        [-0.62, 0.62].map((along) => (
+          <group key={`${side},${along}`} position={[side, 0, along]}>
+            <mesh position={[0, 0.66, 0]}>
+              <cylinderGeometry args={[0.07, 0.09, 1.22, 12, 2]} />
+              <meshLambertMaterial color="#f1efe4" />
+            </mesh>
+            <mesh position={[0, 0.91, 0]}>
+              <cylinderGeometry args={[0.075, 0.08, 0.44, 12]} />
+              <meshLambertMaterial color={dark} />
+            </mesh>
+            <mesh position={[0, 0.075, 0]} scale={[1, 0.58, 1.3]}>
+              <sphereGeometry args={[0.09, 10, 8]} />
+              <meshLambertMaterial color={dark} />
+            </mesh>
+          </group>
         )),
       )}
-      <mesh position={[0, 1.65, -0.68]} rotation={[-0.35, 0, 0]}>
-        <boxGeometry args={[0.35, 1, 0.35]} />
-        <meshLambertMaterial color="#edeadf" />
+      <mesh position={[0, 1.52, -0.64]} rotation={[-0.25, 0, 0]}>
+        <cylinderGeometry args={[0.14, 0.23, 0.9, 16, 3]} />
+        <meshLambertMaterial color="#f1efe4" />
       </mesh>
-      <mesh position={[0, 2, -0.94]}>
-        <boxGeometry args={[0.34, 0.3, 0.6]} />
-        <meshLambertMaterial color="#edeadf" />
+      <mesh position={[0, 1.97, -0.95]} rotation={[-0.35, 0, 0]} scale={[0.23, 0.22, 0.37]}>
+        <sphereGeometry args={[1, 18, 12]} />
+        <meshLambertMaterial color="#f1efe4" />
+      </mesh>
+      <mesh position={[0, 1.83, -1.25]} scale={[0.16, 0.11, 0.22]}>
+        <sphereGeometry args={[1, 16, 10]} />
+        <meshLambertMaterial color="#8b6250" />
+      </mesh>
+      {[
+        [-0.19, 2.14],
+        [0.19, 2.14],
+      ].map(([side, y]) => (
+        <mesh
+          key={side}
+          position={[side, y, -0.87]}
+          rotation={[0, 0, side * 0.6]}
+          scale={[0.08, 0.2, 0.08]}
+        >
+          <sphereGeometry args={[1, 12, 8]} />
+          <meshLambertMaterial color={dark} />
+        </mesh>
+      ))}
+      <mesh position={[0.18, 2.01, -1.12]}>
+        <sphereGeometry args={[0.035, 8, 6]} />
+        <meshBasicMaterial color="#111" />
+      </mesh>
+      <mesh position={[0, 1.86, 0.94]} rotation={[-0.2, 0, 0]}>
+        <cylinderGeometry args={[0.018, 0.035, 0.48, 8]} />
+        <meshLambertMaterial color={dark} />
       </mesh>
     </group>
   )
@@ -484,6 +582,7 @@ function Rail() {
         <planeGeometry args={[180, 180]} />
         <meshLambertMaterial color="#a5a473" />
       </mesh>
+      {/* Raised ballast, paired steel rails and evenly spaced concrete sleepers. */}
       <mesh position={[0, 0.08, 0]}>
         <boxGeometry args={[90, 0.15, 4]} />
         <meshLambertMaterial color="#858079" />
@@ -491,7 +590,7 @@ function Rail() {
       {[-0.8, 0.8].map((z) => (
         <mesh key={z} position={[0, 0.25, z]}>
           <boxGeometry args={[90, 0.12, 0.12]} />
-          <meshLambertMaterial color="#c3c8c5" />
+          <meshStandardMaterial color="#c3c8c5" metalness={0.75} roughness={0.3} />
         </mesh>
       ))}
       {sleepers.map((i) => (
@@ -503,26 +602,58 @@ function Rail() {
       <group ref={train} name="sgr-train">
         {[-8, 0, 8].map((x, i) => (
           <group key={x} position={[x, 0, 0]}>
+            {/* White Madaraka Express coaches with red waist/lower stripes and dark glazing. */}
             <mesh position={[0, 1.65, 0]}>
               <boxGeometry args={[7.5, 2.3, 2.5]} />
               <meshLambertMaterial color={i === 0 ? '#d84235' : '#e8e8de'} />
             </mesh>
             <mesh position={[0, 1.15, 1.26]}>
-              <boxGeometry args={[7.4, 0.35, 0.03]} />
+              <boxGeometry args={[7.3, 0.3, 0.03]} />
               <meshLambertMaterial color="#c63332" />
             </mesh>
-            <mesh position={[0, 2, 1.27]}>
-              <boxGeometry args={[6.9, 0.58, 0.04]} />
-              <meshLambertMaterial color="#28516b" />
+            <mesh position={[0, 0.73, 1.26]}>
+              <boxGeometry args={[7.2, 0.12, 0.035]} />
+              <meshLambertMaterial color="#c63332" />
             </mesh>
-            {[-2.3, 2.3].map((x) => (
-              <mesh key={x} position={[x, 0.47, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.42, 0.42, 2.65, 10]} />
-                <meshLambertMaterial color="#292c2c" />
-              </mesh>
+            {Array.from({ length: 7 }, (_, wi) => (
+              <group key={wi} position={[-2.85 + wi * 0.95, 1.92, 1.285]}>
+                <mesh>
+                  <boxGeometry args={[0.62, 0.62, 0.035]} />
+                  <meshStandardMaterial color="#24485a" metalness={0.2} roughness={0.22} />
+                </mesh>
+                <mesh position={[0, 0, 0.025]}>
+                  <boxGeometry args={[0.045, 0.64, 0.02]} />
+                  <meshLambertMaterial color="#d8ded9" />
+                </mesh>
+              </group>
             ))}
+            <mesh position={[0, 2.83, 0]}>
+              <boxGeometry args={[7.15, 0.16, 2.12]} />
+              <meshLambertMaterial color="#deded5" />
+            </mesh>
+            {/* Two articulated bogies and dark paired wheelsets beneath each coach. */}
+            {[-2.25, 2.25].map((axle) => (
+              <group key={axle} position={[axle, 0.48, 0]}>
+                <mesh><boxGeometry args={[1.6, 0.22, 2.2]} /><meshLambertMaterial color="#343839" /></mesh>
+                {[-1.08, 1.08].map((z) => (
+                  <mesh key={z} position={[0, 0, z]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.39, 0.39, 0.16, 16]} />
+                    <meshStandardMaterial color="#242728" metalness={0.45} roughness={0.55} />
+                  </mesh>
+                ))}
+              </group>
+            ))}
+            {i < 2 && <mesh position={[4.03, 0.7, 0]}><boxGeometry args={[0.65, 0.14, 0.18]} /><meshLambertMaterial color="#292c2c" /></mesh>}
           </group>
         ))}
+      </group>
+      {/* Low station platform canopy and restrained station structures in the distance. */}
+      <group position={[0, 0, -9]}>
+        <mesh position={[0, 0.48, 4]}><boxGeometry args={[72, 0.65, 2]} /><meshLambertMaterial color="#c5b9a2" /></mesh>
+        {Array.from({ length: 9 }, (_, i) => (
+          <mesh key={i} position={[-34 + i * 8.5, 3.1, 4]}><cylinderGeometry args={[0.1, 0.12, 5.3, 8]} /><meshLambertMaterial color="#68767b" /></mesh>
+        ))}
+        <mesh position={[0, 5.85, 4]}><boxGeometry args={[72, 0.18, 7]} /><meshStandardMaterial color="#d7d8d1" metalness={0.15} roughness={0.55} /></mesh>
       </group>
       {[-25, -15, 15, 27].map((x, i) => (
         <Acacia key={x} x={x} z={i % 2 ? -14 : 12} s={0.8} />

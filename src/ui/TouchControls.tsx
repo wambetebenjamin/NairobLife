@@ -24,6 +24,8 @@ export function TouchControls() {
   const t = useT()
   const stick = useRef<{ id: number; x: number; y: number } | null>(null)
   const look = useRef<{ id: number; x: number; y: number } | null>(null)
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinch = useRef<{ ids: [number, number]; distance: number } | null>(null)
   const [knob, setKnob] = useState<{ x: number; y: number; dx: number; dy: number } | null>(null)
   const [running, setRunning] = useState(false)
   const [crouched, setCrouched] = useState(false)
@@ -47,7 +49,18 @@ export function TouchControls() {
       return
     }
     const leftSide = event.clientX < window.innerWidth * 0.42
-    if (leftSide && !stick.current) {
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    const rightPointers = [...pointers.current.entries()].filter(
+      ([, point]) => point.x >= window.innerWidth * 0.42,
+    )
+    if (rightPointers.length === 2) {
+      const [[firstId, first], [secondId, second]] = rightPointers
+      pinch.current = {
+        ids: [firstId, secondId],
+        distance: Math.hypot(first.x - second.x, first.y - second.y),
+      }
+      if (look.current && pinch.current.ids.includes(look.current.id)) look.current = null
+    } else if (leftSide && !stick.current) {
       stick.current = { id: event.pointerId, x: event.clientX, y: event.clientY }
       setKnob({ x: event.clientX, y: event.clientY, dx: 0, dy: 0 })
     } else if (!look.current) {
@@ -56,6 +69,24 @@ export function TouchControls() {
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const point = pointers.current.get(event.pointerId)
+    if (point) {
+      point.x = event.clientX
+      point.y = event.clientY
+    }
+    const activePinch = pinch.current
+    if (activePinch && activePinch.ids.includes(event.pointerId)) {
+      const first = pointers.current.get(activePinch.ids[0])
+      const second = pointers.current.get(activePinch.ids[1])
+      if (first && second) {
+        const distance = Math.hypot(first.x - second.x, first.y - second.y)
+        // Spreading fingers zooms in; bring the change into the same exponential steps
+        // used by the mouse wheel, while keeping it smooth on high-resolution touchscreens.
+        input.addZoom((activePinch.distance - distance) / 80)
+        activePinch.distance = distance
+      }
+      return
+    }
     if (stick.current?.id === event.pointerId) {
       let dx = (event.clientX - stick.current.x) / STICK_RADIUS
       let dy = (event.clientY - stick.current.y) / STICK_RADIUS
@@ -83,6 +114,8 @@ export function TouchControls() {
   }
 
   const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(event.pointerId)
+    if (pinch.current?.ids.includes(event.pointerId)) pinch.current = null
     if (stick.current?.id === event.pointerId) {
       stick.current = null
       input.setTouchMove(0, 0)
