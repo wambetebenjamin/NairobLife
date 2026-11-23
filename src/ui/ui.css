@@ -2,20 +2,20 @@
  * All interface styling. The loading screen's CSS lives in index.html instead, so that
  * it works before this file has loaded.
  *
- * Palette: warm charcoal, soft stone text, and a muted eucalyptus accent. Flag colours
- * remain confined to the small flag mark rather than competing with the whole interface.
+ * Palette: near-black panels, warm off-white text, matatu yellow for anything you can
+ * press, and the red and green of the Kenyan flag as small accents.
  */
 :root {
-  --ink: #171a18;
-  --panel: rgba(27, 31, 28, 0.82);
-  --panel-solid: #252a26;
-  --line: rgba(237, 233, 220, 0.14);
-  --text: #eeeae1;
-  --muted: #beb9ac;
-  --accent: #66816d;
-  --accent-ink: #f5f3ec;
-  --red: #966a60;
-  --green: #66816d;
+  --ink: #0e0f12;
+  --panel: rgba(14, 15, 18, 0.74);
+  --panel-solid: #15171c;
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f4f1ea;
+  --muted: #b3aea2;
+  --accent: #00843d;
+  --accent-ink: #ffffff;
+  --red: #bb0000;
+  --green: #00843d;
   --radius: 12px;
   --display: 'Bungee', 'Arial Black', system-ui, sans-serif;
   --pad: clamp(12px, 2vw, 22px);
@@ -168,13 +168,13 @@ kbd {
 
 .button--primary {
   border-color: transparent;
-  background: linear-gradient(135deg, #708b76, #536d59);
+  background: linear-gradient(135deg, #00843d, #006b32);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(83, 109, 89, 0.22);
+  box-shadow: 0 8px 24px rgba(0, 132, 61, 0.25);
 }
 
 .button--primary:hover {
-  background: linear-gradient(135deg, #7b9681, #66816d);
+  background: linear-gradient(135deg, #00a650, #00843d);
 }
 
 .button--quiet {
@@ -310,11 +310,11 @@ kbd {
   padding: 18px 18px 18px 21px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: 3px solid var(--red);
-  background: linear-gradient(135deg, #708b76, #536d59 72%, #465d4c);
+  background: linear-gradient(135deg, #00843d, #006b32 72%, #00572a);
   color: #fff;
   box-shadow:
     0 12px 34px rgba(0, 0, 0, 0.3),
-    0 8px 30px rgba(83, 109, 89, 0.22),
+    0 8px 30px rgba(0, 132, 61, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
@@ -329,7 +329,7 @@ kbd {
 
 .mode--primary:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, #7b9681, #66816d 72%, #536d59);
+  background: linear-gradient(135deg, #00a650, #00843d 72%, #006b32);
 }
 
 .mode:disabled {
