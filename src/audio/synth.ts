@@ -119,45 +119,6 @@ function normalise(buffer: Float32Array, peak: number): void {
 }
 
 /**
- * A footstep: a scuff of filtered noise over a soft body thump.
- *
- * The noise is a burst rather than a tap, because a foot rolls heel to toe; the thump is
- * the weight of the body arriving. Both are short, and the shape matters more than the
- * exact spectrum: a step is recognisable by its envelope. The surface decides the numbers
- * (see `footsteps.ts`), so a step on gravel is a longer, duller scuff than one on concrete.
- */
-export function footstep(
-  tone: number,
-  thump: number,
-  decay: number,
-  seed: number,
-  rate = SAMPLE_RATE,
-): Float32Array<ArrayBuffer> {
-  const seconds = Math.min(0.3, decay * 3)
-  const length = Math.max(1, Math.round(seconds * rate))
-  const samples = new Float32Array(length)
-  // A cheap deterministic noise: a hash on the sample index, so the same step sounds the
-  // same every time and a test can check it.
-  let state = (seed * 2654435761) >>> 0
-  let low = 0
-  const cutoff = Math.min(0.9, tone / rate)
-  for (let i = 0; i < length; i++) {
-    state = (state * 1664525 + 1013904223) >>> 0
-    const white = (state / 0xffffffff) * 2 - 1
-    // One-pole low-pass: the surface's brightness.
-    low += (white - low) * cutoff
-    const t = i / rate
-    const scuff = Math.exp(-t / decay) * low
-    const weight = Math.exp(-t / (decay * 1.8)) * Math.sin(2 * Math.PI * thump * t) * 0.5
-    samples[i] = (scuff * 0.7 + weight) * 0.8
-  }
-  // Fade the last few samples, so the buffer cannot click when it ends.
-  const fade = Math.min(length, Math.round(0.004 * rate))
-  for (let i = 0; i < fade; i++) samples[length - 1 - i] *= i / fade
-  return samples
-}
-
-/**
  * The city's own bed: a low, steady wash with no rhythm to it, made from a few detuned
  * sines and a breath of noise. It is a drone on purpose — a city heard from inside a
  * street is not a sequence of events, it is a floor.

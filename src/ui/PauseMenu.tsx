@@ -1,6 +1,5 @@
 import { quitToMenu, resumeGame } from '../game/actions'
 import { useGame } from '../state/gameStore'
-import { ControlsCard } from './ControlsCard'
 import { useT } from './useT'
 
 export function PauseMenu() {
@@ -29,7 +28,6 @@ export function PauseMenu() {
             {t('backToMenu')}
           </button>
         </div>
-        <ControlsCard />
       </div>
     </div>
   )

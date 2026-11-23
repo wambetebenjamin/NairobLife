@@ -57,12 +57,8 @@ export function ScenicPreview({
         </button>
       </header>
       <p className="scenic__note">
-        A stylised, looping 3D illustration of{' '}
-        {kind === 'park'
-          ? 'the park: straw grassland, acacia stands, game and the city skyline behind them'
-          : 'the railway'}{' '}
-        — colours sampled from photographs, but not a mapped route, real-time service or playable
-        destination.
+        This looping 3D {kind === 'park' ? 'park' : 'railway'} preview uses a muted photographic
+        palette. It is not a mapped route, real-time service or playable destination.
       </p>
       <div
         className="scenic__view"

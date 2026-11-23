@@ -6,7 +6,6 @@ import {
   SAMPLE_RATE,
   cityBedLoop,
   engineLoop,
-  footstep,
   horn,
 } from './synth'
 
@@ -124,45 +123,6 @@ describe('placing a sound', () => {
     // It falls away faster than distance: a vehicle twice as far is a quarter as loud.
     expect(falloff(50, 100)).toBeCloseTo(0.25, 5)
     expect(falloff(10, 100)).toBeGreaterThan(falloff(20, 100))
-  })
-})
-
-describe('a footstep', () => {
-  it('is a short, quiet burst of noise that never clips', () => {
-    const samples = footstep(2200, 90, 0.09, 3)
-    // A step is tens of milliseconds, not a note.
-    expect(samples.length).toBeGreaterThan(500)
-    expect(samples.length).toBeLessThan(SAMPLE_RATE * 0.4)
-    let peak = 0
-    for (const sample of samples) peak = Math.max(peak, Math.abs(sample))
-    expect(peak).toBeGreaterThan(0.05)
-    expect(peak).toBeLessThanOrEqual(1)
-    for (const sample of samples) expect(Number.isFinite(sample)).toBe(true)
-  })
-
-  it('starts at once and fades to nothing, so it cannot click', () => {
-    const samples = footstep(2200, 90, 0.09, 3)
-    expect(Math.abs(samples[0])).toBeLessThan(0.05)
-    // The end is faded: the last sample is silent.
-    expect(Math.abs(samples[samples.length - 1])).toBeLessThan(1e-6)
-  })
-
-  it('is the same step twice from the same seed, and a different one otherwise', () => {
-    expect(Array.from(footstep(2200, 90, 0.09, 3))).toEqual(Array.from(footstep(2200, 90, 0.09, 3)))
-    const a = Array.from(footstep(2200, 90, 0.09, 3))
-    const b = Array.from(footstep(2200, 90, 0.09, 4))
-    expect(a).not.toEqual(b)
-  })
-
-  it('sounds the surface: gravel is duller than concrete', () => {
-    // The cutoff is one-pole, so a brighter surface has more energy in its high band.
-    const brightness = (tone: number) => {
-      const samples = footstep(tone, 90, 0.09, 3)
-      let movement = 0
-      for (let i = 1; i < samples.length; i++) movement += Math.abs(samples[i] - samples[i - 1])
-      return movement
-    }
-    expect(brightness(3400)).toBeGreaterThan(brightness(1500))
   })
 })
 
