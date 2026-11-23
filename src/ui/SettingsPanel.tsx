@@ -128,12 +128,6 @@ export function SettingsPanel() {
         <Row label={t('invertY')}>
           <Toggle checked={settings.invertY} onChange={(invertY) => update({ invertY })} />
         </Row>
-        <Row label={t('showHints')}>
-          <Toggle
-            checked={settings.showControls}
-            onChange={(showControls) => update({ showControls })}
-          />
-        </Row>
         <Row label="Reduce camera motion">
           <Toggle
             checked={settings.reduceMotion}

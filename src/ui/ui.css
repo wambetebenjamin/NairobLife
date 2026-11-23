@@ -2,20 +2,20 @@
  * All interface styling. The loading screen's CSS lives in index.html instead, so that
  * it works before this file has loaded.
  *
- * Palette: near-black panels, warm off-white text, matatu yellow for anything you can
- * press, and the red and green of the Kenyan flag as small accents.
+ * Palette: warm charcoal, soft stone text, and a muted eucalyptus accent. Flag colours
+ * remain confined to the small flag mark rather than competing with the whole interface.
  */
 :root {
-  --ink: #0e0f12;
-  --panel: rgba(14, 15, 18, 0.74);
-  --panel-solid: #15171c;
-  --line: rgba(255, 255, 255, 0.12);
-  --text: #f4f1ea;
-  --muted: #b3aea2;
-  --accent: #00843d;
-  --accent-ink: #ffffff;
-  --red: #bb0000;
-  --green: #00843d;
+  --ink: #171a18;
+  --panel: rgba(27, 31, 28, 0.82);
+  --panel-solid: #252a26;
+  --line: rgba(237, 233, 220, 0.14);
+  --text: #eeeae1;
+  --muted: #beb9ac;
+  --accent: #66816d;
+  --accent-ink: #f5f3ec;
+  --red: #966a60;
+  --green: #66816d;
   --radius: 12px;
   --display: 'Bungee', 'Arial Black', system-ui, sans-serif;
   --pad: clamp(12px, 2vw, 22px);
@@ -168,13 +168,13 @@ kbd {
 
 .button--primary {
   border-color: transparent;
-  background: linear-gradient(135deg, #00843d, #006b32);
+  background: linear-gradient(135deg, #708b76, #536d59);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(0, 132, 61, 0.25);
+  box-shadow: 0 8px 24px rgba(83, 109, 89, 0.22);
 }
 
 .button--primary:hover {
-  background: linear-gradient(135deg, #00a650, #00843d);
+  background: linear-gradient(135deg, #7b9681, #66816d);
 }
 
 .button--quiet {
@@ -310,11 +310,11 @@ kbd {
   padding: 18px 18px 18px 21px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: 3px solid var(--red);
-  background: linear-gradient(135deg, #00843d, #006b32 72%, #00572a);
+  background: linear-gradient(135deg, #708b76, #536d59 72%, #465d4c);
   color: #fff;
   box-shadow:
     0 12px 34px rgba(0, 0, 0, 0.3),
-    0 8px 30px rgba(0, 132, 61, 0.2),
+    0 8px 30px rgba(83, 109, 89, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
@@ -329,7 +329,7 @@ kbd {
 
 .mode--primary:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, #00a650, #00843d 72%, #006b32);
+  background: linear-gradient(135deg, #7b9681, #66816d 72%, #536d59);
 }
 
 .mode:disabled {
@@ -359,69 +359,6 @@ kbd {
   color: inherit;
 }
 
-.menu__aside {
-  align-self: flex-end;
-}
-
-/* ------------------------------------------------------------------ controls card */
-
-.controls {
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  backdrop-filter: blur(8px);
-}
-
-.controls__title {
-  margin: 0 0 10px;
-  font: 400 14px/1 var(--display);
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.controls ul {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  gap: 7px 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.controls li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.controls li.is-soon {
-  opacity: 0.45;
-}
-
-.controls__keys {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.controls--compact {
-  padding: 8px 14px;
-  border-radius: 999px;
-}
-
-.controls--compact ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 16px;
-}
-
-.controls--compact li {
-  font-size: 12px;
-  color: #d8d3c8;
-}
 
 /* ------------------------------------------------------------------ dialogs */
 
@@ -471,11 +408,6 @@ kbd {
   display: grid;
   gap: 8px;
   margin-bottom: 18px;
-}
-
-.panel--pause .controls {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: none;
 }
 
 .setting {
@@ -1014,15 +946,6 @@ kbd {
   font-size: 13px;
 }
 
-/* Sits between the radar and the speed cluster; hidden where there is no room for it. */
-.hud__hints {
-  bottom: calc(var(--pad) + var(--safe-bottom));
-  left: 50%;
-  width: max-content;
-  max-width: min(600px, calc(100% - 500px));
-  transform: translateX(-50%);
-}
-
 /* ------------------------------------------------------------------ touch controls */
 
 .touch {
@@ -1167,17 +1090,7 @@ kbd {
 
 /* ------------------------------------------------------------------ small screens */
 
-@media (max-width: 1020px) {
-  .hud__hints {
-    display: none;
-  }
-}
-
 @media (max-width: 900px) {
-  .menu__aside {
-    display: none;
-  }
-
   .teleport {
     grid-template-columns: 1fr;
   }

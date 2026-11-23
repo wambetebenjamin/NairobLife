@@ -5,7 +5,6 @@ import { useMemo } from 'react'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { startGame } from '../game/actions'
 import { useGame } from '../state/gameStore'
-import { ControlsCard } from './ControlsCard'
 import { GameName } from './GameName'
 import { useT } from './useT'
 
@@ -62,9 +61,6 @@ export function MainMenu() {
         </footer>
       </div>
 
-      <aside className="menu__aside">
-        <ControlsCard />
-      </aside>
     </div>
   )
 }

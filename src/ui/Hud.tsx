@@ -26,7 +26,6 @@ import { useGame, type VehicleTag } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { formatClock, sunAngle } from '../world/environment/skyModel'
-import { ControlsCard } from './ControlsCard'
 import { GameName } from './GameName'
 import {
   ChevronLeftIcon,
@@ -62,7 +61,6 @@ export function Hud() {
   const t = useT()
   const zone = useGame((state) => state.zone)
   const showHud = useGame((state) => state.settings.showHud)
-  const showControls = useGame((state) => state.settings.showControls)
   const largeHud = useGame((state) => state.settings.largeHud)
   const colourBlindMap = useGame((state) => state.settings.colourBlindMap)
   const haze = useGame((state) => state.settings.haze)
@@ -211,11 +209,6 @@ export function Hud() {
         </div>
       </div>
 
-      {showControls && !touch && !ride && (
-        <div className="hud__hints">
-          <ControlsCard compact driving={!!driving} />
-        </div>
-      )}
     </div>
   )
 }

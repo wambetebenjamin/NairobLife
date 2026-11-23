@@ -21,17 +21,9 @@
  */
 import { useGame } from '../state/gameStore'
 import { runtime } from '../state/runtime'
-import {
-  cityBed as cityBedLevel,
-  cityBedTone,
-  crossedStep,
-  stepAt,
-  stepLength,
-  type Gait,
-  type Surface,
-} from './footsteps'
+import { cityBed as cityBedLevel, cityBedTone } from './footsteps'
 import { ENGINE_RANGE, HORN_RANGE, falloff, panOf } from './placement'
-import { cityBedLoop, footstep, horn, vehicleVoices, type VehicleVoice } from './synth'
+import { cityBedLoop, horn, vehicleVoices, type VehicleVoice } from './synth'
 
 export { falloff, panOf } from './placement'
 
@@ -202,13 +194,6 @@ function hornBuffer(kind: 'matatu' | 'car'): AudioBuffer {
   return buffer!
 }
 
-/**
- * Where the player's feet are in the walk cycle, kept here rather than in a component so
- * the arithmetic runs at the audio rate and not at the render rate.
- */
-let walked = 0
-let lastStep = -1
-
 /** The city's own bed: one looping drone, faded in and out, never restarted. */
 let bed: AudioBufferSourceNode | null = null
 let bedGain: GainNode | null = null
@@ -229,19 +214,14 @@ function ensureBed(): void {
 }
 
 /**
- * The city around the player, every frame: a footstep when a foot lands, and the bed of
- * distant traffic under everything.
+ * The city's distant traffic wash, independent of player movement. There are deliberately
+ * no player footsteps or movement-synchronised sounds.
  *
- * `surface` is what the player is standing on; `roadWidth` is the width of the nearest
- * road in metres and `stageDistance` the distance to the nearest stage, which is what the
- * bed's level is made from (see `cityBed`). Nothing is created until audio has started on
- * a user gesture.
+ * `roadWidth` is the width of the nearest road in metres and `stageDistance` the distance
+ * to the nearest stage, which is what the bed's level is made from (see `cityBed`). Nothing
+ * is created until audio has started on a user gesture.
  */
 export function updateCity(
-  delta: number,
-  speed: number,
-  gait: Gait,
-  surface: Surface,
   roadWidth: number,
   stageDistance: number,
   rain: number,
@@ -249,7 +229,6 @@ export function updateCity(
 ): void {
   if (!context || !master || audio.muted) return
   const now = context.currentTime
-  const seconds = Math.min(delta, 0.05)
 
   // ---- the city bed
   const target = cityBedLevel(roadWidth, stageDistance, rain, indoors)
@@ -257,44 +236,6 @@ export function updateCity(
   if (Math.abs(tone - bedTone) > 20) bedTone = tone
   ensureBed()
   bedGain?.gain.setTargetAtTime(target, now, 0.6)
-
-  // ---- footsteps: distance walked is the clock
-  if (speed > 0.25 && runtime.player.grounded) {
-    walked += speed * seconds
-    const length = stepLength(speed, gait)
-    if (crossedStep(walked - speed * seconds, walked, length) > 0) {
-      const step = stepAt(walked, speed, gait, surface, 0)
-      if (step && step.index !== lastStep) {
-        lastStep = step.index
-        playStep(step.gain, step.tone, step.thump, step.decay, step.index)
-      }
-    }
-  } else if (speed <= 0.25) {
-    // Standing still resets the phase, so the first step after a pause is a fresh one.
-    lastStep = -1
-  }
-}
-
-/** One footstep, made from a short buffer and dropped as soon as it has played. */
-function playStep(gain: number, tone: number, thump: number, decay: number, seed: number): void {
-  if (!context || !master) return
-  const samples = footstep(tone, thump, decay, seed)
-  const buffer = context.createBuffer(1, samples.length, context.sampleRate)
-  buffer.copyToChannel(samples, 0)
-  const source = context.createBufferSource()
-  source.buffer = buffer
-  // Alternate the pan a little: a left foot falls slightly left of centre.
-  const pan = context.createStereoPanner()
-  pan.pan.value = seed % 2 === 0 ? -0.12 : 0.12
-  const level = context.createGain()
-  level.gain.value = Math.min(0.5, gain)
-  source.connect(level).connect(pan).connect(master)
-  source.start(context.currentTime)
-  source.onended = () => {
-    source.disconnect()
-    level.disconnect()
-    pan.disconnect()
-  }
 }
 
 /** Stop everything: called when the game pauses or the tab goes away. */
