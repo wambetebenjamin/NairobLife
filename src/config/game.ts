@@ -14,9 +14,6 @@ export const GAME_WORDMARK = ['ka', 'NAIRO'] as const
 /** The name as plain text, for places with no logo to draw (the map pipeline signs with it). */
 export const GAME_NAME = GAME_WORDMARK.join('')
 export const GAME_TAGLINE = 'Free-roam Nairobi. No download.'
-/** The repository kept the project's working title. */
-export const REPO_URL = 'https://github.com/wambetebenjamin/NairobLife'
-
 export const PLAYER = {
   radius: 0.32,
   /** Standing and crouching height of the collision capsule, in metres. */

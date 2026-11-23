@@ -45,6 +45,9 @@ export interface Settings {
   volume: number
   muted: boolean
   cameraMode: CameraMode
+  reduceMotion: boolean
+  largeHud: boolean
+  colourBlindMap: boolean
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -62,6 +65,9 @@ const DEFAULT_SETTINGS: Settings = {
   volume: 0.6,
   muted: false,
   cameraMode: 'third',
+  reduceMotion: false,
+  largeHud: false,
+  colourBlindMap: false,
 }
 
 export interface Toast {

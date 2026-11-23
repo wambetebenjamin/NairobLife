@@ -5,6 +5,11 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Blender working files and backups (commit optimized, consumed .glb assets only)
+*.blend
+*.blend1
+*.blend2
+
 # local env (never commit secrets; see .env.example)
 .env
 .env.*

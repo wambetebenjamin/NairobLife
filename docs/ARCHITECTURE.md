@@ -254,5 +254,4 @@ Search the code for `TODO(` followed by a topic:
 | `TODO(art)`         | `vehicleModels.ts`, `PlayerModel.tsx`               | Hand-made models, with the built ones as the fallback  |
 | `TODO(terrain)`     | `Ground.tsx`, `config/zones.ts`                     | Height field under the decals                          |
 | `TODO(landmarks)`   | `scripts/osm/landmarks.ts`                          | Hand-made models for the icons                         |
-| `TODO(gamepad)`     | `config/controls.ts`                                | Map a controller onto the same actions                 |
 | `TODO(sheng)`       | `config/strings.ts`, `Hud.tsx`                      | A native speaker's pass over the draft                 |

@@ -63,6 +63,8 @@ export function Hud() {
   const zone = useGame((state) => state.zone)
   const showHud = useGame((state) => state.settings.showHud)
   const showControls = useGame((state) => state.settings.showControls)
+  const largeHud = useGame((state) => state.settings.largeHud)
+  const colourBlindMap = useGame((state) => state.settings.colourBlindMap)
   const haze = useGame((state) => state.settings.haze)
   const weather = useGame((state) => state.settings.weather)
   const touch = useGame((state) => state.touch)
@@ -71,7 +73,10 @@ export function Hud() {
   const driving = useGame((state) => state.driving)
   const ride = useGame((state) => state.ride)
   const nearVehicle = useGame((state) => state.nearVehicle)
-  const map = useMemo(() => (zone ? getMapImage(zone.file) : null), [zone])
+  const map = useMemo(
+    () => (zone ? getMapImage(zone.file, colourBlindMap) : null),
+    [zone, colourBlindMap],
+  )
 
   const [sample, setSample] = useState<Sample | null>(null)
   useEffect(() => {
@@ -111,7 +116,7 @@ export function Hud() {
   )
 
   return (
-    <div className={`hud${showHud ? '' : ' hud--hidden'}`}>
+    <div className={`hud${showHud ? '' : ' hud--hidden'}${largeHud ? ' hud--large' : ''}`}>
       <div className="hud__brand">
         <GameName />
       </div>

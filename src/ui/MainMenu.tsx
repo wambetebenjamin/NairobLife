@@ -2,7 +2,6 @@
  * The main menu, drawn over the live city (the camera circles KICC behind it).
  */
 import { useMemo } from 'react'
-import { REPO_URL } from '../config/game'
 import { OSM_ATTRIBUTION } from '../world/zone/format'
 import { startGame } from '../game/actions'
 import { useGame } from '../state/gameStore'
@@ -23,7 +22,10 @@ export function MainMenu() {
   return (
     <div className="menu">
       <div className="menu__column">
+        <p className="menu__eyebrow">NAIROBI · KENYA</p>
         <div className="flag" aria-hidden="true">
+          <i />
+          <i />
           <i />
           <i />
           <i />
@@ -47,9 +49,6 @@ export function MainMenu() {
           <button className="link" onClick={() => openSettings(true)}>
             {t('settings')}
           </button>
-          <a className="link" href={REPO_URL} target="_blank" rel="noreferrer">
-            GitHub
-          </a>
         </div>
 
         <footer className="menu__footer">

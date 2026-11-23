@@ -23,9 +23,14 @@ const GROUPS: Landmark['group'][] = ['Downtown', 'Parks & campus', 'Up high']
 export function TeleportMenu() {
   const t = useT()
   const zone = useGame((state) => state.zone)
-  const map = useMemo(() => (zone ? getMapImage(zone.file) : null), [zone])
+  const colourBlindMap = useGame((state) => state.settings.colourBlindMap)
+  const map = useMemo(
+    () => (zone ? getMapImage(zone.file, colourBlindMap) : null),
+    [zone, colourBlindMap],
+  )
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [scenic, setScenic] = useState<ScenicKind | null>(null)
   const scenicLauncher = useRef<HTMLButtonElement | null>(null)
   const closeScenic = () => {
@@ -52,6 +57,15 @@ export function TeleportMenu() {
   })
   const here = place(runtime.player.x, runtime.player.z)
   const planned = ZONES.filter((def) => def.status !== 'live')
+  const normalizedSearch = search.trim().toLocaleLowerCase()
+  const visibleLandmarks = LANDMARKS.filter(
+    (landmark) =>
+      landmark.zone === zone.id &&
+      (!normalizedSearch ||
+        `${landmark.name} ${landmark.blurb} ${landmark.group}`
+          .toLocaleLowerCase()
+          .includes(normalizedSearch)),
+  )
 
   return (
     <div className="overlay overlay--top" onClick={closeTeleport}>
@@ -71,6 +85,21 @@ export function TeleportMenu() {
 
         <div className="teleport">
           <div className="teleport__list">
+            <label className="destination-search">
+              <span>Search CBD destinations</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Try KICC, park, museum…"
+                aria-label="Search mapped destinations"
+              />
+            </label>
+            {normalizedSearch && visibleLandmarks.length === 0 && (
+              <p className="destination-note" role="status">
+                No mapped destination matches “{search}”. Try another name or landmark type.
+              </p>
+            )}
             <RidePlanner zone={zone} />
             <section className="ride-planner">
               <h3>Scenic previews</h3>
@@ -116,23 +145,25 @@ export function TeleportMenu() {
                 </div>
               ))}
             </section>
-            {GROUPS.map((group) => (
+            {GROUPS.filter((group) =>
+              visibleLandmarks.some((landmark) => landmark.group === group),
+            ).map((group) => (
               <section key={group}>
                 <h3>{group}</h3>
-                {LANDMARKS.filter(
-                  (landmark) => landmark.group === group && landmark.zone === zone.id,
-                ).map((landmark) => (
-                  <button
-                    key={landmark.id}
-                    className={`place${hovered === landmark.id ? ' is-hot' : ''}`}
-                    onClick={() => teleportTo(landmark)}
-                    onMouseEnter={() => setHovered(landmark.id)}
-                    onMouseLeave={() => setHovered(null)}
-                  >
-                    <strong>{landmark.name}</strong>
-                    <span>{landmark.blurb}</span>
-                  </button>
-                ))}
+                {visibleLandmarks
+                  .filter((landmark) => landmark.group === group)
+                  .map((landmark) => (
+                    <button
+                      key={landmark.id}
+                      className={`place${hovered === landmark.id ? ' is-hot' : ''}`}
+                      onClick={() => teleportTo(landmark)}
+                      onMouseEnter={() => setHovered(landmark.id)}
+                      onMouseLeave={() => setHovered(null)}
+                    >
+                      <strong>{landmark.name}</strong>
+                      <span>{landmark.blurb}</span>
+                    </button>
+                  ))}
               </section>
             ))}
             <section>
@@ -149,7 +180,7 @@ export function TeleportMenu() {
           <div className="teleport__map">
             <div className="atlas">
               <canvas ref={canvasRef} />
-              {LANDMARKS.filter((landmark) => landmark.zone === zone.id).map((landmark) => {
+              {visibleLandmarks.map((landmark) => {
                 const [x, z] = projection.toWorld(landmark.spawn.lat, landmark.spawn.lon)
                 return (
                   <button

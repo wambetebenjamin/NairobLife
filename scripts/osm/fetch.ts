@@ -15,7 +15,7 @@
  * Data (c) OpenStreetMap contributors, ODbL 1.0: https://www.openstreetmap.org/copyright
  */
 import { pathToFileURL } from 'node:url'
-import { GAME_NAME, REPO_URL } from '../../src/config/game'
+import { GAME_NAME } from '../../src/config/game'
 import { ZONES, type ZoneDef } from '../../src/config/zones'
 import type { BBox } from '../../src/core/geo'
 import { hasRaw, writeRaw, type OverpassJson } from './lib/osm'
@@ -97,7 +97,7 @@ async function download(zone: ZoneDef): Promise<OverpassJson> {
         body,
         headers: {
           // Overpass operators ask for a User-Agent that says who is calling.
-          'User-Agent': `${GAME_NAME} map pipeline (${REPO_URL})`,
+          'User-Agent': `${GAME_NAME} map-data pipeline`,
           Accept: 'application/json',
         },
         signal: AbortSignal.timeout((TIMEOUT_SECONDS + 30) * 1000),

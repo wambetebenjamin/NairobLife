@@ -72,7 +72,7 @@ export function Minimap({ map, size }: { map: MapImage; size: number }) {
       }
 
       // Landmarks in range.
-      ctx.fillStyle = '#ffd21f'
+      ctx.fillStyle = '#00843d'
       for (const pin of PINS) {
         if (Math.abs(pin.x - x) > reach || Math.abs(pin.z - z) > reach) continue
         ctx.beginPath()
