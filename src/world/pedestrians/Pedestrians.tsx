@@ -18,6 +18,7 @@
  * the roadmap says so.
  */
 import { useFrame } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
 import { useEffect, useMemo, useRef } from 'react'
 import {
   BufferAttribute,
@@ -28,7 +29,10 @@ import {
   MeshLambertMaterial,
   Quaternion,
   Vector3,
+  Group,
 } from 'three'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { useGame, useQuality } from '../../state/gameStore'
 import type { LoadedZone } from '../zone/loadZone'
 import {
@@ -48,7 +52,7 @@ import {
 } from './body'
 import { allPartGeometry, type PartMesh } from './figures'
 import { makeBody, tintOf } from './appearance'
-import { pedestrianPose, planPedestrians } from './paths'
+import { pedestrianPose, planPedestrians, type WalkingPath } from './paths'
 
 const RANGES = { high: 180, medium: 140, low: 100 }
 
@@ -257,6 +261,25 @@ export function Pedestrians({
     [zone, start, exclusion],
   )
   const bodies = useMemo(() => paths.map((path) => makeBody(path.seed)), [paths])
+  // One CC0, textured character gives the opening crowd a higher-detail human while the
+  // rest remain instanced. Choose a clear walking-path midpoint close to the start; the
+  // generated pedestrian at that slot is omitted so the two models never overlap.
+  const heroIndex = useMemo(() => {
+    let best = -1
+    let bestDistance = Infinity
+    for (let i = 0; i < paths.length; i++) {
+      if (i === heroIndex) continue
+      const path = paths[i]
+      const x = (path.ax + path.bx) * 0.5
+      const z = (path.az + path.bz) * 0.5
+      const distance = Math.hypot(x - start.x, z - start.z)
+      if (distance >= 18 && distance <= 55 && distance < bestDistance) {
+        best = i
+        bestDistance = distance
+      }
+    }
+    return best
+  }, [paths, start])
   const refs = useRef<(InstancedMesh | null)[]>([])
   const elapsed = useRef(0)
   /** Per person: how far they have walked, so the gait keeps up with the ground. */
@@ -307,6 +330,7 @@ export function Pedestrians({
     let count = 0
 
     for (let i = 0; i < paths.length; i++) {
+      if (i === heroIndex) continue
       const path = paths[i]
       const body = bodies[i]
       const pose = pedestrianPose(path, elapsed.current)
@@ -346,6 +370,7 @@ export function Pedestrians({
   if (!paths.length) return null
   return (
     <group name="pedestrians">
+      {heroIndex >= 0 && <DetailedPedestrian path={paths[heroIndex]} quality={quality} />}
       {MESHES.map((entry, i) => (
         <instancedMesh
           key={`${entry.part}-${entry.side}`}
@@ -397,4 +422,50 @@ function poseJoints(
     }
     if (joint.children) poseJoints(joint.children, local, meshes, index, body, paint)
   }
+}
+
+
+/** A single rigged CC0 model used as a static person waiting on a city pavement. */
+function DetailedPedestrian({
+  path,
+  quality,
+}: {
+  path: WalkingPath
+  quality: 'low' | 'medium' | 'high' | 'auto'
+}) {
+  const { scene } = useGLTF(
+    '/assets/characters/rosa.glb',
+    true,
+    true,
+    (loader) => loader.setMeshoptDecoder(MeshoptDecoder),
+  )
+  const model = useMemo(() => {
+    const object = clone(scene)
+    object.traverse((node) => {
+      if ('isMesh' in node && node.isMesh) {
+        node.castShadow = true
+        node.receiveShadow = true
+      }
+    })
+    return object
+  }, [scene])
+  const root = useRef<Group>(null)
+  const x = (path.ax + path.bx) * 0.5
+  const z = (path.az + path.bz) * 0.5
+  const yaw = Math.atan2(-(path.bx - path.ax), -(path.bz - path.az))
+
+  useFrame(({ camera }) => {
+    const range = RANGES[quality === 'auto' ? 'high' : quality]
+    if (root.current) {
+      const dx = camera.position.x - x
+      const dz = camera.position.z - z
+      root.current.visible = dx * dx + dz * dz < range * range
+    }
+  })
+
+  return (
+    <group ref={root} position={[x, 0, z]} rotation={[0, yaw, 0]} name="cc0-detailed-pedestrian">
+      <primitive object={model} scale={0.95} />
+    </group>
+  )
 }
