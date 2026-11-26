@@ -114,6 +114,8 @@ export class FleetView {
   readonly group = new Group()
 
   private readonly fleet: Fleet
+  /** One imported CC0 model is drawn outside the batched meshes; all others stay instanced. */
+  private readonly featuredVehicleId: number
   private readonly kinds: Record<VehicleKind, KindView>
   private readonly wheels: InstancedMesh
   private readonly shade: InstancedMesh
@@ -137,8 +139,9 @@ export class FleetView {
   private shadeCount = 0
   private seenRevision = -1
 
-  constructor(fleet: Fleet) {
+  constructor(fleet: Fleet, featuredVehicleId = -1) {
     this.fleet = fleet
+    this.featuredVehicleId = featuredVehicleId
     this.group.name = 'vehicles'
     const total = fleet.vehicles.length
     this.tier = new Uint8Array(total)
@@ -244,6 +247,10 @@ export class FleetView {
 
     for (const vehicle of this.fleet.vehicles) {
       const { id, state } = vehicle
+      if (id === this.featuredVehicleId) {
+        this.tier[id] = HIDDEN
+        continue
+      }
       const dx = state.x - cameraX
       const dy = state.y - cameraY
       const dz = state.z - cameraZ
@@ -312,8 +319,15 @@ export class FleetView {
       const isDriven = id === driven
       const pose = this.fleet.pose(vehicle, alpha, isDriven ? out : scratchPose)
       if (isDriven) drawn = pose
-      if (this.tier[id] === HIDDEN) continue
       const lit = isDriven && night > LAMPS_ON_AT
+      if (id === this.featuredVehicleId) {
+        if (lit) {
+          beam = BEAM.intensity
+          this.aimBeam(vehicle, pose)
+        }
+        continue
+      }
+      if (this.tier[id] === HIDDEN) continue
       if (lit) {
         beam = BEAM.intensity
         this.aimBeam(vehicle, pose)

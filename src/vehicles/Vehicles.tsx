@@ -11,8 +11,10 @@
  */
 import { useFrame } from '@react-three/fiber'
 import { useBeforePhysicsStep, useRapier } from '@react-three/rapier'
-import { useEffect, useRef } from 'react'
+import { useGLTF } from '@react-three/drei'
+import { useEffect, useMemo, useRef } from 'react'
 import type { Group } from 'three'
+import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { DRIVING } from '../config/vehicles'
 import { clamp } from '../core/math'
 import { input } from '../input/input'
@@ -21,7 +23,7 @@ import { useGame, useQuality, type Quality } from '../state/gameStore'
 import { runtime } from '../state/runtime'
 import { stepFraction } from '../world/physics/stepFraction'
 import { endDriving, pressEnterExit } from './driving'
-import { Fleet, type Pose } from './fleet'
+import { Fleet, type Pose, type Vehicle } from './fleet'
 import type { Placement } from './placement'
 import type { DriveInput } from './sim/vehicleSim'
 import { FleetView, type DrawRanges } from './view/fleetView'
@@ -47,14 +49,16 @@ export function Vehicles({ placements }: { placements: Placement[] }) {
   const { rapier, world } = useRapier()
   const quality = useQuality()
   const root = useRef<Group>(null)
-  const live = useRef<{ fleet: Fleet; view: FleetView } | null>(null)
+  const live = useRef<{ fleet: Fleet; view: FleetView; featured: Vehicle | null } | null>(null)
 
   useEffect(() => {
     const parent = root.current
     const fleet = new Fleet(world, rapier, placements)
-    const view = new FleetView(fleet)
+    // One CC0 compact-car GLB is the hero vehicle; the rest of this large fleet remains instanced.
+    const featured = fleet.vehicles.find((vehicle) => vehicle.kind === 'car') ?? null
+    const view = new FleetView(fleet, featured?.id ?? -1)
     parent?.add(view.group)
-    live.current = { fleet, view }
+    live.current = { fleet, view, featured }
     expose('fleet', fleet)
     return () => {
       live.current = null
@@ -168,5 +172,52 @@ export function Vehicles({ placements }: { placements: Placement[] }) {
     }
   }, -30)
 
-  return <group ref={root} name="fleet" />
+  return (
+    <group ref={root} name="fleet">
+      <FeaturedVehicle scene={live} />
+    </group>
+  )
+}
+
+
+/** One imported free compact car follows its real Fleet state; the procedural fallback is
+ * hidden for this vehicle only, while collision, controls and headlights remain unchanged. */
+function FeaturedVehicle({
+  scene,
+}: {
+  scene: React.MutableRefObject<{ fleet: Fleet; view: FleetView; featured: Vehicle | null } | null>
+}) {
+  const { scene: source } = useGLTF('/assets/vehicles/cc0-compact-car.glb')
+  const model = useMemo(() => {
+    const object = clone(source)
+    object.traverse((node) => {
+      if ('isMesh' in node && node.isMesh) {
+        node.castShadow = true
+        node.receiveShadow = true
+      }
+    })
+    return object
+  }, [source])
+  const root = useRef<Group>(null)
+  const pose = useRef<Pose>({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }).current
+
+  useFrame(() => {
+    const active = scene.current
+    const vehicle = active?.featured
+    if (!root.current || !active || !vehicle) {
+      if (root.current) root.current.visible = false
+      return
+    }
+    active.fleet.pose(vehicle, stepFraction(), pose)
+    root.current.visible = true
+    root.current.position.set(pose.x, pose.y, pose.z)
+    // The source GLB faces +Z; kaNAIRO's heading zero faces -Z.
+    root.current.rotation.set(pose.pitch, pose.yaw + Math.PI, 0, 'YXZ')
+  })
+
+  return (
+    <group ref={root} name="cc0-featured-car">
+      <primitive object={model} />
+    </group>
+  )
 }
