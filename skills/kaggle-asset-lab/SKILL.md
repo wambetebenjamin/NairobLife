@@ -12,7 +12,7 @@ Use Kaggle as a temporary, user-owned GPU workstation when the coding sandbox la
 ## Before a run
 
 1. Read `docs/KAGGLE_ASSET_WORKSPACE.md`, `docs/BLENDER_ASSETS.md`, and `skills/blender-nairobi-game-art/SKILL.md`.
-2. Prefer the checked-in `notebooks/kaggle_triposr_asset_lab.ipynb` for the first free image-to-3D experiment. TripoSR is image-conditioned, not text-conditioned. Use one clean, rights-cleared input image and one candidate first.
+2. Prefer the checked-in `notebooks/kaggle_triposr_asset_lab.ipynb` for the first free image-to-3D experiment. TripoSR is image-conditioned, not text-conditioned. Use one clean, rights-cleared input image and one candidate first. The notebook sources optional reference images/videos from Wikimedia Commons under recorded CC0/public-domain/CC BY/CC BY-SA terms; it filters NC/ND, preserves attribution/provenance, caps downloads, and extracts only review frames from video. Review the media manually and honor ShareAlike obligations; never scrape Google or download YouTube media as a shortcut.
 3. User must import/run the notebook in Kaggle, enable internet and select an available GPU. Never ask for Kaggle credentials, tokens or secrets in chat or commit them to notebook/repository.
 4. Check current upstream license, dependency setup, Kaggle accelerator/quotas, and model-weight terms at run time. Stop on dependency/CUDA errors rather than silently replacing Kaggle's PyTorch/CUDA stack.
 
